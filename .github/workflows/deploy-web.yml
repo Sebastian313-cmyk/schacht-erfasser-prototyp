@@ -1,0 +1,66 @@
+name: Build and deploy Flutter Web
+
+on:
+  push:
+    branches:
+      - import/erfasser-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Quellcode laden
+        uses: actions/checkout@v4
+
+      - name: Flutter installieren
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter-Version anzeigen
+        run: flutter --version
+
+      - name: Abhängigkeiten laden
+        run: flutter pub get
+
+      - name: Service-Worker-Pfad für GitHub Pages anpassen
+        run: |
+          sed -i "s|register('/sw.js')|register('/schacht-erfasser-prototyp/sw.js')|" web/index.html
+
+      - name: Web-App bauen
+        run: flutter build web --release --base-href /schacht-erfasser-prototyp/
+
+      - name: Direkte Routen auf die App zurückführen
+        run: cp build/web/index.html build/web/404.html
+
+      - name: GitHub Pages konfigurieren
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Web-Build hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Auf GitHub Pages veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
