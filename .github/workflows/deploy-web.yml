@@ -34,25 +34,35 @@ jobs:
       - name: Abhängigkeiten laden
         run: flutter pub get
 
-      - name: Service-Worker-Pfad für GitHub Pages anpassen
-        run: |
-          sed -i "s|register('/sw.js')|register('/schacht-erfasser-prototyp/sw.js')|" web/index.html
-
-      - name: Web-App bauen
-        run: flutter build web --release --base-href /schacht-erfasser-prototyp/
+      - name: Web-App für direkte Bereitstellung bauen
+        run: flutter build web --release --base-href /
 
       - name: Direkte Routen auf die App zurückführen
         run: cp build/web/index.html build/web/404.html
 
-      - name: GitHub Pages konfigurieren
-        uses: actions/configure-pages@v5
+      - name: Fertigen Web-Build sichern
+        uses: actions/upload-artifact@v4
         with:
-          enablement: true
+          name: erfasser-web
+          path: build/web
+          if-no-files-found: error
 
-      - name: Web-Build hochladen
+      - name: Build zusätzlich für GitHub Pages anpassen
+        run: |
+          sed -i 's|<base href="/">|<base href="/schacht-erfasser-prototyp/">|' build/web/index.html
+          sed -i "s|register('/sw.js')|register('/schacht-erfasser-prototyp/sw.js')|" build/web/index.html
+          cp build/web/index.html build/web/404.html
+
+      - name: GitHub-Pages-Build hochladen
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
+
+      - name: GitHub Pages konfigurieren
+        continue-on-error: true
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
   deploy:
     needs: build
