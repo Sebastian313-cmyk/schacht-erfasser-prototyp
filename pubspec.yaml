@@ -82,7 +82,11 @@ flutter:
     - assets/App/Logo/3f39f55e-78f4-473f-b6c2-69f9ffc486b9-md.jpeg
     - assets/es_icon.svg
     - assets/ssk_icon.svg
-    - assets/fonts/
+    # Nur die vier tatsächlich verwendeten PDF-/UI-Schriften bündeln.
+    - assets/fonts/Roboto-Regular.ttf
+    - assets/fonts/Roboto-Bold.ttf
+    - assets/fonts/NotoSans-Regular.ttf
+    - assets/fonts/NotoSans-Bold.ttf
     - assets/App/Formulare/
     # Medien-Assets für Fotos, Videos, Audios (alle Unterordner)
     - assets/App/ES/
