@@ -2,23 +2,23 @@ import 'package:flutter/material.dart';
 import 'routes.dart';
 // ...existing code...
 import 'widgets/update_dialog.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize PDF viewer on web platform
   if (kIsWeb) {
     _initializeWebPdfViewers();
   }
-  
+
   runApp(const ErfasserApp());
 }
 
 // Initialize PDF viewer factories for web
 void _initializeWebPdfViewers() {
   if (!kIsWeb) return;
-  
+
   try {
     // Schedule PDF viewer initialization after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -32,7 +32,7 @@ void _initializeWebPdfViewers() {
 // Register PDF viewer factories
 void _registerPdfViewerFactories() {
   if (!kIsWeb) return;
-  
+
   try {
     // This will attempt to load and execute web module
     // The actual registration happens in the web layer
@@ -48,9 +48,6 @@ void _loadWebModule() {
   // The actual implementation is in pdf_viewer_web.dart
 }
 
-
-
-
 class ErfasserApp extends StatelessWidget {
   final bool disableUpdateChecker;
   const ErfasserApp({super.key, this.disableUpdateChecker = false});
@@ -63,6 +60,7 @@ class ErfasserApp extends StatelessWidget {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'NotoSans',
       colorScheme: scheme,
       scaffoldBackgroundColor: const Color(0xFFF7FAF7),
       appBarTheme: AppBarTheme(
@@ -81,7 +79,9 @@ class ErfasserApp extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           minimumSize: const Size(44, 44),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
@@ -89,7 +89,9 @@ class ErfasserApp extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(44, 44),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           side: BorderSide(color: scheme.outlineVariant),
         ),
       ),
@@ -104,7 +106,10 @@ class ErfasserApp extends StatelessWidget {
         filled: true,
         fillColor: Colors.white,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: scheme.outlineVariant),
@@ -152,7 +157,7 @@ class ErfasserApp extends StatelessWidget {
           return content;
         }
         return UpdateChecker(
-          checkOnStart: true,
+          checkOnStart: !kDebugMode,
           checkInterval: const Duration(hours: 24),
           child: content,
         );

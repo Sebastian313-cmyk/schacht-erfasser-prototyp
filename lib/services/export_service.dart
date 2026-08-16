@@ -46,28 +46,34 @@ class ExportService {
 
     final lines = <String>[_csvLine(headers)];
     for (final meta in metas) {
-      final schaedenRaw = (meta['schaeden'] as List<dynamic>?) ?? const <dynamic>[];
+      final schaedenRaw =
+          (meta['schaeden'] as List<dynamic>?) ?? const <dynamic>[];
       final schaeden = meta['keinBefund'] == true
           ? 'Kein Befund'
           : (meta['typ'] == 'ES'
-              ? _augmentEsSchaeden(schaedenRaw).join(', ')
-              : schaedenRaw.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).join(', '));
+                ? _cleanSchaeden(schaedenRaw).join(', ')
+                : schaedenRaw
+                      .map((e) => e.toString())
+                      .where((e) => e.trim().isNotEmpty)
+                      .join(', '));
 
-      lines.add(_csvLine([
-        evnr,
-        (meta['strasse'] ?? strasse ?? '').toString(),
-        (meta['posNr'] ?? '').toString(),
-        (meta['typ'] ?? '').toString(),
-        _csvJoin(meta['statusVorOrt']),
-        _csvJoin(meta['verfuegbarkeit']),
-        schaeden,
-        (meta['bemerkung'] ?? '').toString(),
-        _csvJoin(meta['abteilungen'] ?? meta['abteilungsMarker']),
-        ((meta['mediaFotos'] as List<dynamic>?)?.length ?? 0).toString(),
-        ((meta['mediaVideos'] as List<dynamic>?)?.length ?? 0).toString(),
-        ((meta['mediaAudios'] as List<dynamic>?)?.length ?? 0).toString(),
-        ((meta['mediaPdfs'] as List<dynamic>?)?.length ?? 0).toString(),
-      ]));
+      lines.add(
+        _csvLine([
+          evnr,
+          (meta['strasse'] ?? strasse ?? '').toString(),
+          (meta['posNr'] ?? '').toString(),
+          _gesamtberichtTypLabel((meta['typ'] ?? '').toString()),
+          _csvJoin(meta['statusVorOrt']),
+          _csvJoin(meta['verfuegbarkeit']),
+          schaeden,
+          (meta['bemerkung'] ?? '').toString(),
+          _csvJoin(meta['abteilungen'] ?? meta['abteilungsMarker']),
+          ((meta['mediaFotos'] as List<dynamic>?)?.length ?? 0).toString(),
+          ((meta['mediaVideos'] as List<dynamic>?)?.length ?? 0).toString(),
+          ((meta['mediaAudios'] as List<dynamic>?)?.length ?? 0).toString(),
+          ((meta['mediaPdfs'] as List<dynamic>?)?.length ?? 0).toString(),
+        ]),
+      );
     }
 
     return Uint8List.fromList(utf8.encode('\uFEFF${lines.join('\n')}'));
@@ -75,11 +81,19 @@ class ExportService {
 
   static Future<pw.ThemeData> _theme() async {
     try {
-      final reg = pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Regular.ttf'));
-      final bold = pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Bold.ttf'));
+      final reg = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/Roboto-Regular.ttf'),
+      );
+      final bold = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/Roboto-Bold.ttf'),
+      );
       // Fallbacks für Unicode-Zeichen (en/em dash etc.)
-      final notoReg = pw.Font.ttf(await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'));
-      final notoBold = pw.Font.ttf(await rootBundle.load('assets/fonts/NotoSans-Bold.ttf'));
+      final notoReg = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'),
+      );
+      final notoBold = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/NotoSans-Bold.ttf'),
+      );
       return pw.ThemeData.withFont(
         base: reg,
         bold: bold,
@@ -109,8 +123,10 @@ class ExportService {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('Erfassung - Gesamtbericht',
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Erfassung - Gesamtbericht',
+              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 2),
             pw.Text('EVNr: $evnr', style: const pw.TextStyle(fontSize: 10)),
           ],
@@ -118,10 +134,22 @@ class ExportService {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
-            pw.Text('Erfasser: ${erfasser ?? '—'}', style: const pw.TextStyle(fontSize: 10)),
-            pw.Text('Straße: ${strasse ?? '—'}', style: const pw.TextStyle(fontSize: 10)),
-            pw.Text('Datum/Zeit: ${zeit != null ? _date.format(zeit) : '—'}', style: const pw.TextStyle(fontSize: 10)),
-            pw.Text('Wetter: ${wetter ?? '—'}', style: const pw.TextStyle(fontSize: 10)),
+            pw.Text(
+              'Erfasser: ${erfasser ?? '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              'Straße: ${strasse ?? '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              'Datum/Zeit: ${zeit != null ? _date.format(zeit) : '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              'Wetter: ${wetter ?? '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
           ],
         ),
       ],
@@ -131,11 +159,10 @@ class ExportService {
       'Pos.',
       'Objekt',
       'Deckelart',
-      'Aufbau',
+      'Beschreibung',
       'KL',
       'Schaden',
       'Bemerkung',
-      'Medien',
     ];
 
     // Zeilen vorbereiten
@@ -143,17 +170,24 @@ class ExportService {
     final rowIsRed = <bool>[];
 
     for (final meta in metas) {
-      final pos = (meta['posNr'] as String?)?.trim().isNotEmpty == true ? (meta['posNr'] as String).trim() : '—';
+      final pos = (meta['posNr'] as String?)?.trim().isNotEmpty == true
+          ? (meta['posNr'] as String).trim()
+          : '—';
       final typ = (meta['typ'] as String?) ?? 'DIV';
+      final typLabel = _gesamtberichtTypLabel(typ);
 
       // Schaden-Logik: rot wenn es echte Schäden gibt.
       // "Kein Befund" => NICHT rot.
       // RF gilt als Schaden-Hinweis, zählt hier als Schaden (weil in Schäden-Liste enthalten).
       final bool keinBefund = meta['keinBefund'] == true;
-        final List<dynamic> schaedenListRaw = (meta['schaeden'] as List<dynamic>?) ?? const [];
-        final schaeden = typ == 'ES'
-          ? _augmentEsSchaeden(schaedenListRaw)
-          : schaedenListRaw.map((e) => e.toString()).where((s) => s.trim().isNotEmpty).toList();
+      final List<dynamic> schaedenListRaw =
+          (meta['schaeden'] as List<dynamic>?) ?? const [];
+      final schaeden = typ == 'ES'
+          ? _cleanSchaeden(schaedenListRaw)
+          : schaedenListRaw
+                .map((e) => e.toString())
+                .where((s) => s.trim().isNotEmpty)
+                .toList();
       final hasSchaden = !keinBefund && schaeden.isNotEmpty;
 
       final titel = _metaTitel(meta);
@@ -161,31 +195,28 @@ class ExportService {
       final deckelart = _deckelart(meta);
       final aufbau = _aufbau(meta);
       final kl = (meta['kl'] ?? '').toString().trim();
+      final beschreibung = aufbau;
 
-      // Medien
       final bemerkungRaw = (meta['bemerkung'] ?? '').toString().trim();
-      final bemerkung = _mergeBemerkung(bemerkungRaw, '');
-
-      // Medien: nur Indikatoren mit Anzahl
-      final List<dynamic> fotos = (meta['mediaFotos'] as List<dynamic>?) ?? const [];
-      final List<dynamic> videos = (meta['mediaVideos'] as List<dynamic>?) ?? const [];
-      final List<dynamic> audios = (meta['mediaAudios'] as List<dynamic>?) ?? const [];
-
-      final List<String> mediaIndicators = [];
-      if (fotos.isNotEmpty) mediaIndicators.add('Fotos: ${fotos.length}');
-      if (videos.isNotEmpty) mediaIndicators.add('🎥 ${videos.length}');
-      if (audios.isNotEmpty) mediaIndicators.add('🔊 ${audios.length}');
-      final mediaStr = mediaIndicators.isEmpty ? '—' : mediaIndicators.join(' ');
+      final bemerkung = _mergeBemerkung(bemerkungRaw, _mediaHint(meta));
 
       rows.add([
         pw.Text(pos, style: pw.TextStyle(fontSize: 8)),
-        pw.Text(typ, style: pw.TextStyle(fontSize: 8)),
-        pw.Text(deckelart.isEmpty ? '—' : deckelart, style: pw.TextStyle(fontSize: 8)),
-        pw.Text(aufbau.isEmpty ? '—' : aufbau, style: pw.TextStyle(fontSize: 8)),
+        pw.Text(typLabel, style: pw.TextStyle(fontSize: 8)),
+        pw.Text(
+          deckelart.isEmpty ? '—' : deckelart,
+          style: pw.TextStyle(fontSize: 8),
+        ),
+        pw.Text(
+          beschreibung.isEmpty ? '—' : beschreibung,
+          style: pw.TextStyle(fontSize: 8),
+        ),
         pw.Text(kl.isEmpty ? '—' : kl, style: pw.TextStyle(fontSize: 8)),
         pw.Text(titel, style: pw.TextStyle(fontSize: 8)),
-        pw.Text(bemerkung.isEmpty ? '—' : bemerkung, style: pw.TextStyle(fontSize: 8)),
-        pw.Text(mediaStr, style: pw.TextStyle(fontSize: 8)),
+        pw.Text(
+          bemerkung.isEmpty ? '—' : bemerkung,
+          style: pw.TextStyle(fontSize: 8),
+        ),
       ]);
       rowIsRed.add(hasSchaden);
     }
@@ -205,16 +236,29 @@ class ExportService {
 
     return pdf.save();
   }
+
   // Neue Version für Widget-Zeilen
-  static pw.Widget _tableWithRowStylesWidgets(List<String> headers, List<List<pw.Widget>> data, List<bool> redRows) {
+  static pw.Widget _tableWithRowStylesWidgets(
+    List<String> headers,
+    List<List<pw.Widget>> data,
+    List<bool> redRows,
+  ) {
     // Header
     final headerRow = pw.TableRow(
       decoration: const pw.BoxDecoration(color: PdfColors.grey300),
       children: headers
-          .map((h) => pw.Padding(
-                padding: const pw.EdgeInsets.all(4),
-                child: pw.Text(h, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
-              ))
+          .map(
+            (h) => pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(
+                h,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 9,
+                ),
+              ),
+            ),
+          )
           .toList(),
     );
 
@@ -228,10 +272,10 @@ class ExportService {
         pw.TableRow(
           decoration: bg != null ? pw.BoxDecoration(color: bg) : null,
           children: data[i]
-              .map((c) => pw.Padding(
-                    padding: const pw.EdgeInsets.all(3),
-                    child: c,
-                  ))
+              .map(
+                (c) =>
+                    pw.Padding(padding: const pw.EdgeInsets.all(3), child: c),
+              )
               .toList(),
         ),
       );
@@ -240,14 +284,13 @@ class ExportService {
     return pw.Table(
       border: pw.TableBorder.all(width: 0.4),
       columnWidths: const {
-        0: pw.FlexColumnWidth(0.7),   // Pos.
-        1: pw.FlexColumnWidth(1.0),   // Objekt
-        2: pw.FlexColumnWidth(2.2),   // Deckelart
-        3: pw.FlexColumnWidth(2.2),   // Aufbau
-        4: pw.FlexColumnWidth(0.9),   // KL
-        5: pw.FlexColumnWidth(2.6),   // Schaden
-        6: pw.FlexColumnWidth(3.2),   // Bemerkung
-        7: pw.FlexColumnWidth(3.2),   // Medien
+        0: pw.FlexColumnWidth(0.7), // Pos.
+        1: pw.FlexColumnWidth(1.0), // Objekt
+        2: pw.FlexColumnWidth(2.2), // Deckelart
+        3: pw.FlexColumnWidth(3.4), // Beschreibung
+        4: pw.FlexColumnWidth(0.9), // KL
+        5: pw.FlexColumnWidth(2.6), // Schaden
+        6: pw.FlexColumnWidth(3.2), // Bemerkung
       },
       children: rows,
     );
@@ -266,13 +309,15 @@ class ExportService {
   }) async {
     final pdf = pw.Document(theme: await _theme());
 
-    final abteilungName = {
-      'M': 'Maurer',
-      'S': 'Schlosser',
-      'BAUKO': 'Baukontrollmeister',
-      'NIS': 'NIS',
-      'R': 'Reinigung',
-    }[abteilung] ?? abteilung;
+    final abteilungName =
+        {
+          'M': 'Maurer',
+          'S': 'Schlosser',
+          'BAUKO': 'Baukontrollmeister',
+          'NIS': 'NIS',
+          'R': 'Reinigung',
+        }[abteilung] ??
+        abteilung;
 
     final headerRow = pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -280,8 +325,10 @@ class ExportService {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('Abteilungsbericht - $abteilungName',
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Abteilungsbericht - $abteilungName',
+              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 2),
             pw.Text('EVNr: $evnr', style: const pw.TextStyle(fontSize: 10)),
           ],
@@ -289,10 +336,22 @@ class ExportService {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
-            pw.Text('Erfasser: ${erfasser ?? '—'}', style: const pw.TextStyle(fontSize: 10)),
-            pw.Text('Straße: ${strasse ?? '—'}', style: const pw.TextStyle(fontSize: 10)),
-            pw.Text('Datum/Zeit: ${zeit != null ? _date.format(zeit) : '—'}', style: const pw.TextStyle(fontSize: 10)),
-            pw.Text('Wetter: ${wetter ?? '—'}', style: const pw.TextStyle(fontSize: 10)),
+            pw.Text(
+              'Erfasser: ${erfasser ?? '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              'Straße: ${strasse ?? '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              'Datum/Zeit: ${zeit != null ? _date.format(zeit) : '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+            pw.Text(
+              'Wetter: ${wetter ?? '—'}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
           ],
         ),
       ],
@@ -311,16 +370,25 @@ class ExportService {
     final rowIsRed = <bool>[];
 
     for (final meta in metas) {
-      final pos = (meta['posNr'] as String?)?.trim().isNotEmpty == true ? (meta['posNr'] as String).trim() : '—';
+      final pos = (meta['posNr'] as String?)?.trim().isNotEmpty == true
+          ? (meta['posNr'] as String).trim()
+          : '—';
       final typ = (meta['typ'] as String?) ?? 'DIV';
+      final typLabel = _gesamtberichtTypLabel(typ);
 
       // Schaden-Logik
       final bool keinBefund = meta['keinBefund'] == true;
-      final List<dynamic> schaedenListRaw = (meta['schaeden'] as List<dynamic>?) ?? const [];
-      final schaeden = schaedenListRaw.map((e) => e.toString()).where((s) => s.trim().isNotEmpty).toList();
+      final List<dynamic> schaedenListRaw =
+          (meta['schaeden'] as List<dynamic>?) ?? const [];
+      final schaeden = schaedenListRaw
+          .map((e) => e.toString())
+          .where((s) => s.trim().isNotEmpty)
+          .toList();
       final hasSchaden = !keinBefund && schaeden.isNotEmpty;
-      
-      final schadenText = keinBefund ? 'Kein Befund' : (schaeden.isEmpty ? '—' : schaeden.join(', '));
+
+      final schadenText = keinBefund
+          ? 'Kein Befund'
+          : (schaeden.isEmpty ? '—' : schaeden.join(', '));
 
       // Beschreibung aus verschiedenen Quellen
       String beschreibung = '';
@@ -328,7 +396,7 @@ class ExportService {
         beschreibung = (meta['beschreibung'] ?? '').toString().trim();
       } else if (typ == 'ES') {
         beschreibung = (meta['einsteigart'] ?? '').toString().trim();
-      } else if (typ == 'VS') {
+      } else if (typ == 'VG' || typ == 'VS' || typ == 'G') {
         beschreibung = (meta['grubentyp'] ?? '').toString().trim();
       } else if (typ == 'LÜ') {
         beschreibung = (meta['art'] ?? '').toString().trim();
@@ -348,7 +416,7 @@ class ExportService {
 
       rows.add([
         pos,
-        typ,
+        typLabel,
         beschreibung.isEmpty ? '—' : beschreibung,
         schadenText,
         bemerkung.isEmpty ? '—' : bemerkung,
@@ -367,21 +435,29 @@ class ExportService {
           pw.Table(
             border: pw.TableBorder.all(width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(0.7),   // Pos
-              1: pw.FlexColumnWidth(0.6),   // Typ
-              2: pw.FlexColumnWidth(2.5),   // Beschreibung
-              3: pw.FlexColumnWidth(2.0),   // Schaden
-              4: pw.FlexColumnWidth(2.2),   // Bemerkung
+              0: pw.FlexColumnWidth(0.7), // Pos
+              1: pw.FlexColumnWidth(0.6), // Typ
+              2: pw.FlexColumnWidth(2.5), // Beschreibung
+              3: pw.FlexColumnWidth(2.0), // Schaden
+              4: pw.FlexColumnWidth(2.2), // Bemerkung
             },
             children: [
               // Header
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.grey300),
                 children: headers
-                    .map((h) => pw.Padding(
-                          padding: const pw.EdgeInsets.all(4),
-                          child: pw.Text(h, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
-                        ))
+                    .map(
+                      (h) => pw.Padding(
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          h,
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
               // Datenzeilen
@@ -393,10 +469,15 @@ class ExportService {
                 return pw.TableRow(
                   decoration: bg != null ? pw.BoxDecoration(color: bg) : null,
                   children: rows[i]
-                      .map((c) => pw.Padding(
-                            padding: const pw.EdgeInsets.all(3),
-                            child: pw.Text(c, style: pw.TextStyle(fontSize: 8, color: fg)),
-                          ))
+                      .map(
+                        (c) => pw.Padding(
+                          padding: const pw.EdgeInsets.all(3),
+                          child: pw.Text(
+                            c,
+                            style: pw.TextStyle(fontSize: 8, color: fg),
+                          ),
+                        ),
+                      )
                       .toList(),
                 );
               }),
@@ -410,14 +491,13 @@ class ExportService {
   }
 
   /// ZIP aus Preview-Plan + Meta.
-  /// Neue Ordnerstruktur:
-  /// - Hauptordner: ErfasserApp/
-  /// - Export-Unterordner: E00000_Musterstraße/
-  /// - Aufträge/ (Abteilungen mit 312/313 Struktur)
-  /// - Erfassungen/ (Objekte mit Positionsnummern + Gesamtbericht)
-  /// - EV Ordner/ (Maßnahme von T22 per Email)
-  /// - NIS/ (Plan mit Nummerierung)
-  /// - Schriftverkehr/ (alle Emails zur Maßnahme)
+  /// Vollständige Auftragsstruktur:
+  /// - EVNr_Strasse/
+  /// - EV/
+  /// - NIS/
+  /// - Schriftverkehr/
+  /// - Aufträge/Abteilung/Position/
+  /// - Erfassung/Position/
   static Future<Uint8List> buildZipFromPlanMeta(
     ExportPlan plan,
     List<Map<String, dynamic>> metas, {
@@ -428,46 +508,50 @@ class ExportService {
   }) async {
     final archive = Archive();
 
-    // Hauptordner mit App-Namen, darin pro Export ein EVNr/Strasse-Unterordner
-    final appRootFolder = 'ErfasserApp';
-    final exportFolder =
-      '${plan.evnr.replaceAll('/', '-')}_${plan.strasse?.replaceAll('/', '-') ?? 'Strasse'}';
-    final mainFolder = '$appRootFolder/$exportFolder';
+    void addTextFile(String path, String content) {
+      final bytes = utf8.encode(content);
+      archive.addFile(ArchiveFile(path, bytes.length, bytes));
+    }
+
+    final mainFolder =
+        '${_safePathSegment(plan.evnr)}_${_safePathSegment(plan.strasse ?? 'Strasse')}';
 
     // erfassungen.json hinzufügen (für Import-Kompatibilität)
-    final erfassungenMap = <String, dynamic>{
-      plan.evnr: metas,
-    };
+    final erfassungenMap = <String, dynamic>{plan.evnr: metas};
     final erfassungenJson = jsonEncode(erfassungenMap);
-    archive.addFile(
-      ArchiveFile(
-        '$mainFolder/erfassungen.json',
-        erfassungenJson.length,
-        utf8.encode(erfassungenJson),
-      ),
-    );
+    addTextFile('$mainFolder/EV/erfassungen.json', erfassungenJson);
 
-    // Gesamtbericht im Erfassungen-Ordner
+    // Gesamtbericht im Erfassungs-Ordner
     if (plan.gesamtPdfPlanned) {
       final bytes = await buildGesamtPdfFromMetas(
         evnr: plan.evnr,
-        metas: plan.positions.map((p) => p.meta).whereType<Map<String, dynamic>>().toList(),
+        metas: plan.positions
+            .map((p) => p.meta)
+            .whereType<Map<String, dynamic>>()
+            .toList(),
         erfasser: erfasser,
         strasse: plan.strasse,
         wetter: wetter,
         zeit: zeit,
       );
-      archive.addFile(ArchiveFile('$mainFolder/Erfassungen/Gesamt_Bericht.pdf', bytes.length, bytes));
+      archive.addFile(
+        ArchiveFile(
+          '$mainFolder/Erfassung/Gesamt_Bericht.pdf',
+          bytes.length,
+          bytes,
+        ),
+      );
     }
 
-    // Einzelpositionen: Erfassungen/1/, Erfassungen/2/, Erfassungen/3/, ...
+    // Einzelpositionen: Erfassung/1/, Erfassung/2/, Erfassung/1-3/, ...
     for (final pos in plan.positions) {
       // Verwende positionsnummer, oder als Fallback den Index
-      final posNum = (pos.positionsnummer ?? '').trim().isEmpty 
+      final posNum = (pos.positionsnummer ?? '').trim().isEmpty
           ? pos.index.toString()
           : (pos.positionsnummer ?? '').trim();
-      
-      final posFolder = '$mainFolder/Erfassungen/$posNum';
+
+      final safePosNum = _safePathSegment(posNum);
+      final posFolder = '$mainFolder/Erfassung/$safePosNum';
       final meta = pos.meta;
 
       if (pos.steckbriefPlanned && meta != null) {
@@ -476,23 +560,47 @@ class ExportService {
           erfasser: erfasser,
           wetter: wetter,
         );
-        archive.addFile(ArchiveFile('$posFolder/Steckbrief.pdf', einzelBytes.length, einzelBytes));
+        archive.addFile(
+          ArchiveFile(
+            '$posFolder/Steckbrief.pdf',
+            einzelBytes.length,
+            einzelBytes,
+          ),
+        );
 
-        // DOCX-Formular auf Platzhalterbasis hinzufügen (nur ES/VS)
+        // DOCX-Formular auf Platzhalterbasis hinzufügen (nur ES/VG)
         final typ = (meta['typ']?.toString() ?? '').trim();
         if (typ == 'ES') {
-          final esDocx = await FormularService.buildEinsteigschaechteDocxBytesFromMeta(meta);
+          final esDocx =
+              await FormularService.buildEinsteigschaechteDocxBytesFromMeta(
+                meta,
+              );
           if (esDocx != null && esDocx.isNotEmpty) {
-            archive.addFile(ArchiveFile('$posFolder/Erfassungsblatt_Einsteigschacht.docx', esDocx.length, esDocx));
+            archive.addFile(
+              ArchiveFile(
+                '$posFolder/Erfassungsblatt_Einsteigschacht.docx',
+                esDocx.length,
+                esDocx,
+              ),
+            );
           }
-        } else if (typ == 'VS') {
+        } else if (typ == 'VG' || typ == 'VS' || typ == 'G') {
           if (_shouldCreateVsDocx(meta)) {
-            final vsDocx = await FormularService.buildSickergrubenDocxBytesFromMeta(meta);
+            final vsDocx =
+                await FormularService.buildSickergrubenDocxBytesFromMeta(meta);
             if (vsDocx != null && vsDocx.isNotEmpty) {
-              archive.addFile(ArchiveFile('$posFolder/Erfassung_Sickergrube.docx', vsDocx.length, vsDocx));
+              archive.addFile(
+                ArchiveFile(
+                  '$posFolder/Erfassung_Sickergrube.docx',
+                  vsDocx.length,
+                  vsDocx,
+                ),
+              );
             }
           } else {
-            debugPrint('⚠️  VG-DOCX für Position $posNum nicht erstellt (Felder unvollständig).');
+            debugPrint(
+              '⚠️  VG-DOCX für Position $posNum nicht erstellt (Felder unvollständig).',
+            );
           }
         }
 
@@ -504,12 +612,22 @@ class ExportService {
               posNr: posNum,
               strasse: plan.strasse,
               erfasser: erfasser,
-              zeit: meta['zeit'] != null ? DateTime.tryParse(meta['zeit'] as String) : null,
+              zeit: meta['zeit'] != null
+                  ? DateTime.tryParse(meta['zeit'] as String)
+                  : null,
               meta: meta,
             );
-            archive.addFile(ArchiveFile('$posFolder/Aufmass_Ruckenfreiheit.pdf', rfBytes.length, rfBytes));
+            archive.addFile(
+              ArchiveFile(
+                '$posFolder/Aufmass_Ruckenfreiheit.pdf',
+                rfBytes.length,
+                rfBytes,
+              ),
+            );
           } catch (e) {
-            debugPrint('⚠️  Fehler beim Erstellen des RF-Aufmaßblatts für Position $posNum: $e');
+            debugPrint(
+              '⚠️  Fehler beim Erstellen des RF-Aufmaßblatts für Position $posNum: $e',
+            );
           }
         }
       }
@@ -519,7 +637,13 @@ class ExportService {
       for (final f in pos.fotos.where((m) => m.planned)) {
         final bytes = await _decodeDataUrl(f.dataUrl);
         if (bytes != null) {
-          archive.addFile(ArchiveFile('$posFolder/foto_$fotoCounter.jpg', bytes.length, bytes));
+          archive.addFile(
+            ArchiveFile(
+              '$posFolder/Medien/Fotos/foto_$fotoCounter.jpg',
+              bytes.length,
+              bytes,
+            ),
+          );
           fotoCounter++;
         }
       }
@@ -529,7 +653,13 @@ class ExportService {
       for (final v in pos.videos.where((m) => m.planned)) {
         final bytes = await _decodeDataUrl(v.dataUrl);
         if (bytes != null) {
-          archive.addFile(ArchiveFile('$posFolder/video_$videoCounter.mp4', bytes.length, bytes));
+          archive.addFile(
+            ArchiveFile(
+              '$posFolder/Medien/Videos/video_$videoCounter.mp4',
+              bytes.length,
+              bytes,
+            ),
+          );
           videoCounter++;
         }
       }
@@ -539,7 +669,13 @@ class ExportService {
       for (final a in pos.audios.where((m) => m.planned)) {
         final bytes = await _decodeDataUrl(a.dataUrl);
         if (bytes != null) {
-          archive.addFile(ArchiveFile('$posFolder/audio_$audioCounter.webm', bytes.length, bytes));
+          archive.addFile(
+            ArchiveFile(
+              '$posFolder/Medien/Audio/audio_$audioCounter.webm',
+              bytes.length,
+              bytes,
+            ),
+          );
           audioCounter++;
         }
       }
@@ -549,7 +685,13 @@ class ExportService {
       for (final p in pos.pdfs.where((m) => m.planned)) {
         final bytes = await _decodeDataUrl(p.dataUrl);
         if (bytes != null) {
-          archive.addFile(ArchiveFile('$posFolder/pdf_$pdfCounter.pdf', bytes.length, bytes));
+          archive.addFile(
+            ArchiveFile(
+              '$posFolder/Medien/Dateien/pdf_$pdfCounter.pdf',
+              bytes.length,
+              bytes,
+            ),
+          );
           pdfCounter++;
         }
       }
@@ -559,10 +701,15 @@ class ExportService {
     final abteilungsMap = _groupPositionsByAbteilung(plan.positions);
     for (final abteilung in abteilungsMap.keys) {
       final positions = abteilungsMap[abteilung] ?? [];
-      
+      final safeAbteilung = _safePathSegment(abteilung);
+      final abteilungFolder = '$mainFolder/Aufträge/$safeAbteilung';
+
       // Abteilungs-PDF erstellen mit allen Positionen dieser Abteilung
       if (positions.isNotEmpty) {
-        final abteilungMetas = positions.map((p) => p.meta).whereType<Map<String, dynamic>>().toList();
+        final abteilungMetas = positions
+            .map((p) => p.meta)
+            .whereType<Map<String, dynamic>>()
+            .toList();
         final abteilungPdfBytes = await buildAbteilungsPdfFromMetas(
           abteilung: abteilung,
           evnr: plan.evnr,
@@ -572,12 +719,19 @@ class ExportService {
           wetter: wetter,
           zeit: zeit,
         );
-        archive.addFile(ArchiveFile('$mainFolder/Aufträge/$abteilung/Abteilungsbericht_$abteilung.pdf', abteilungPdfBytes.length, abteilungPdfBytes));
+        archive.addFile(
+          ArchiveFile(
+            '$abteilungFolder/Gesamt_Bericht_$safeAbteilung.pdf',
+            abteilungPdfBytes.length,
+            abteilungPdfBytes,
+          ),
+        );
       }
-      
+
       for (final pos in positions) {
         final posNum = (pos.positionsnummer ?? pos.index.toString()).trim();
-        final abtFolder = '$mainFolder/Aufträge/$abteilung/$posNum';
+        final safePosNum = _safePathSegment(posNum);
+        final abtFolder = '$abteilungFolder/$safePosNum';
         final meta = pos.meta;
 
         if (pos.steckbriefPlanned && meta != null) {
@@ -586,23 +740,49 @@ class ExportService {
             erfasser: erfasser,
             wetter: wetter,
           );
-          archive.addFile(ArchiveFile('$abtFolder/Steckbrief.pdf', einzelBytes.length, einzelBytes));
+          archive.addFile(
+            ArchiveFile(
+              '$abtFolder/Bericht_Position_$safePosNum.pdf',
+              einzelBytes.length,
+              einzelBytes,
+            ),
+          );
 
           // DOCX-Formular auf Platzhalterbasis auch im Abteilungsordner hinzufügen
           final typ = (meta['typ']?.toString() ?? '').trim();
           if (typ == 'ES') {
-            final esDocx = await FormularService.buildEinsteigschaechteDocxBytesFromMeta(meta);
+            final esDocx =
+                await FormularService.buildEinsteigschaechteDocxBytesFromMeta(
+                  meta,
+                );
             if (esDocx != null && esDocx.isNotEmpty) {
-              archive.addFile(ArchiveFile('$abtFolder/Erfassungsblatt_Einsteigschacht.docx', esDocx.length, esDocx));
+              archive.addFile(
+                ArchiveFile(
+                  '$abtFolder/Erfassungsblatt_Einsteigschacht.docx',
+                  esDocx.length,
+                  esDocx,
+                ),
+              );
             }
-          } else if (typ == 'VS') {
+          } else if (typ == 'VG' || typ == 'VS' || typ == 'G') {
             if (_shouldCreateVsDocx(meta)) {
-              final vsDocx = await FormularService.buildSickergrubenDocxBytesFromMeta(meta);
+              final vsDocx =
+                  await FormularService.buildSickergrubenDocxBytesFromMeta(
+                    meta,
+                  );
               if (vsDocx != null && vsDocx.isNotEmpty) {
-                archive.addFile(ArchiveFile('$abtFolder/Erfassung_Sickergrube.docx', vsDocx.length, vsDocx));
+                archive.addFile(
+                  ArchiveFile(
+                    '$abtFolder/Erfassung_Sickergrube.docx',
+                    vsDocx.length,
+                    vsDocx,
+                  ),
+                );
               }
             } else {
-              debugPrint('⚠️  VG-DOCX für Position $posNum im Abteilungsordner nicht erstellt (Felder unvollständig).');
+              debugPrint(
+                '⚠️  VG-DOCX für Position $posNum im Abteilungsordner nicht erstellt (Felder unvollständig).',
+              );
             }
           }
 
@@ -614,12 +794,22 @@ class ExportService {
                 posNr: posNum,
                 strasse: plan.strasse,
                 erfasser: erfasser,
-                zeit: meta['zeit'] != null ? DateTime.tryParse(meta['zeit'] as String) : null,
+                zeit: meta['zeit'] != null
+                    ? DateTime.tryParse(meta['zeit'] as String)
+                    : null,
                 meta: meta,
               );
-              archive.addFile(ArchiveFile('$abtFolder/Aufmass_Ruckenfreiheit.pdf', rfBytes.length, rfBytes));
+              archive.addFile(
+                ArchiveFile(
+                  '$abtFolder/Aufmass_Ruckenfreiheit.pdf',
+                  rfBytes.length,
+                  rfBytes,
+                ),
+              );
             } catch (e) {
-              debugPrint('⚠️  Fehler beim Erstellen des RF-Aufmaßblatts für Position $posNum: $e');
+              debugPrint(
+                '⚠️  Fehler beim Erstellen des RF-Aufmaßblatts für Position $posNum: $e',
+              );
             }
           }
         }
@@ -629,7 +819,13 @@ class ExportService {
         for (final f in pos.fotos.where((m) => m.planned)) {
           final bytes = await _decodeDataUrl(f.dataUrl);
           if (bytes != null) {
-            archive.addFile(ArchiveFile('$abtFolder/foto_$fotoCounter.jpg', bytes.length, bytes));
+            archive.addFile(
+              ArchiveFile(
+                '$abtFolder/Medien/Fotos/foto_$fotoCounter.jpg',
+                bytes.length,
+                bytes,
+              ),
+            );
             fotoCounter++;
           }
         }
@@ -639,7 +835,13 @@ class ExportService {
         for (final v in pos.videos.where((m) => m.planned)) {
           final bytes = await _decodeDataUrl(v.dataUrl);
           if (bytes != null) {
-            archive.addFile(ArchiveFile('$abtFolder/video_$videoCounter.mp4', bytes.length, bytes));
+            archive.addFile(
+              ArchiveFile(
+                '$abtFolder/Medien/Videos/video_$videoCounter.mp4',
+                bytes.length,
+                bytes,
+              ),
+            );
             videoCounter++;
           }
         }
@@ -649,7 +851,13 @@ class ExportService {
         for (final a in pos.audios.where((m) => m.planned)) {
           final bytes = await _decodeDataUrl(a.dataUrl);
           if (bytes != null) {
-            archive.addFile(ArchiveFile('$abtFolder/audio_$audioCounter.webm', bytes.length, bytes));
+            archive.addFile(
+              ArchiveFile(
+                '$abtFolder/Medien/Audio/audio_$audioCounter.webm',
+                bytes.length,
+                bytes,
+              ),
+            );
             audioCounter++;
           }
         }
@@ -659,51 +867,58 @@ class ExportService {
         for (final p in pos.pdfs.where((m) => m.planned)) {
           final bytes = await _decodeDataUrl(p.dataUrl);
           if (bytes != null) {
-            archive.addFile(ArchiveFile('$abtFolder/pdf_$pdfCounter.pdf', bytes.length, bytes));
+            archive.addFile(
+              ArchiveFile(
+                '$abtFolder/Medien/Dateien/pdf_$pdfCounter.pdf',
+                bytes.length,
+                bytes,
+              ),
+            );
             pdfCounter++;
           }
         }
       }
     }
 
-    // Platzhalter-Ordner für EV Ordner, NIS und Schriftverkehr
-    // Diese werden mit einer Readme.txt Datei befüllt
-    archive.addFile(ArchiveFile(
-      '$mainFolder/EV Ordner/README.txt',
-      57,
-      utf8.encode('Hier kommen Maßnahmen von T22 per Email rein.'),
-    ));
-    
+    if (abteilungsMap.isEmpty) {
+      addTextFile(
+        '$mainFolder/Aufträge/README.txt',
+        'Für diesen Auftrag wurden noch keine Abteilungen ausgewählt.',
+      );
+    }
+
+    // EV-, NIS- und Schriftverkehrsordner erhalten mindestens eine Datei,
+    // damit die Ordner auch nach dem Entpacken sichtbar sind.
+    addTextFile(
+      '$mainFolder/EV/README.txt',
+      'Auftragsunterlagen zur EVNr ${plan.evnr}.',
+    );
+
     // NIS-Ordner: PDF hinzufügen, falls vorhanden, sonst README
     if (nisPlanPdfBase64 != null && nisPlanPdfBase64.isNotEmpty) {
       try {
         final pdfBytes = base64Decode(nisPlanPdfBase64);
-        archive.addFile(ArchiveFile(
-          '$mainFolder/NIS/Plan.pdf',
-          pdfBytes.length,
-          pdfBytes,
-        ));
+        archive.addFile(
+          ArchiveFile('$mainFolder/NIS/Plan.pdf', pdfBytes.length, pdfBytes),
+        );
       } catch (e) {
         // Fallback bei Fehler: README
-        archive.addFile(ArchiveFile(
+        addTextFile(
           '$mainFolder/NIS/README.txt',
-          49,
-          utf8.encode('Hier kommt der Plan mit Nummerierung rein.'),
-        ));
+          'Hier kommt der Plan mit Nummerierung rein.',
+        );
       }
     } else {
-      archive.addFile(ArchiveFile(
+      addTextFile(
         '$mainFolder/NIS/README.txt',
-        49,
-        utf8.encode('Hier kommt der Plan mit Nummerierung rein.'),
-      ));
+        'Hier kommt der Plan mit Nummerierung rein.',
+      );
     }
-    
-    archive.addFile(ArchiveFile(
+
+    addTextFile(
       '$mainFolder/Schriftverkehr/README.txt',
-      53,
-      utf8.encode('Hier kommen alle Emails zur Maßnahme rein.'),
-    ));
+      'Hier kommen alle E-Mails zur Maßnahme hinein.',
+    );
 
     // Vorgefertigte Emails für jede Abteilung in Schriftverkehr/Vorlagen/
     _generateAbteilungEmails(
@@ -726,7 +941,16 @@ class ExportService {
     String? erfasser,
     String? wetter,
   }) async {
-    final typ = (meta['typ'] as String?) ?? 'DIV';
+    final rawTyp = ((meta['typ'] as String?) ?? 'DIV').trim();
+    final upperTyp = rawTyp.toUpperCase();
+    final typ =
+        (upperTyp == 'VS' ||
+            upperTyp == 'VG' ||
+            upperTyp == 'G' ||
+            upperTyp.contains('SICKERGRUBE') ||
+            upperTyp.contains('GRUBE'))
+        ? 'VG'
+        : upperTyp;
 
     final fields = SpeicherService.metaToFields(
       meta,
@@ -734,21 +958,31 @@ class ExportService {
       strasse: (meta['strasse'] as String?),
       wetter: wetter ?? (meta['wetter'] as String?),
     );
-    
+
     if (typ == 'LÜ') {
       debugPrint('[buildEinzelPdfFromMeta] LÜ fields: $fields');
     }
 
-    final notes = <String>[];
     final mediaHint = _mediaHint(meta);
-    if (mediaHint.isNotEmpty) notes.add(mediaHint);
+    if (mediaHint.isNotEmpty) {
+      fields['Bemerkung'] = _mergeBemerkung(
+        fields['Bemerkung'] ?? '',
+        mediaHint,
+      );
+    }
+    final notes = <String>[];
 
     switch (typ) {
       case 'ES':
         final rf = _rfActive(meta);
-        final bytes = await PdfMiniKit.esSteckbrief(fields: fields, rf: rf, notes: notes);
+        final bytes = await PdfMiniKit.esSteckbrief(
+          fields: fields,
+          rf: rf,
+          notes: notes,
+        );
         return Uint8List.fromList(bytes);
 
+      case 'VG':
       case 'VS':
         // Grube
         return await PdfMiniKit.gSteckbrief(fields: fields, notes: notes);
@@ -794,23 +1028,44 @@ class ExportService {
 
   // -------------------- Helpers --------------------
 
+  static String _safePathSegment(String value) {
+    final cleaned = value
+        .trim()
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '-')
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'_+'), '_');
+    return cleaned.isEmpty ? 'Unbekannt' : cleaned;
+  }
+
   static bool _rfActive(Map<String, dynamic> meta) {
     final schaeden = meta['schaeden'];
-    
+
     // Handle both List<dynamic> and String formats
     if (schaeden is List) {
-      final hasRF = schaeden.map((e) => e.toString().trim()).contains('Keine Rückenfreiheit');
+      final hasRF = schaeden
+          .map((e) => e.toString().trim())
+          .contains('Keine Rückenfreiheit');
       if (hasRF) return true;
     } else if (schaeden is String) {
       // If stored as CSV string, split and check
-      final hasRF = schaeden.split(',').map((e) => e.trim()).contains('Keine Rückenfreiheit');
+      final hasRF = schaeden
+          .split(',')
+          .map((e) => e.trim())
+          .contains('Keine Rückenfreiheit');
       if (hasRF) return true;
     }
-    
+
     // Fallback: RF aktivieren, wenn RF-Maßfelder gefüllt sind (wie beim manuellen Eingeben)
     const rfKeys = [
-      'st1Hoehe', 'st1Rf', 'st2Hoehe', 'st2Rf',
-      'mAusgleich', 'mKonusAnf', 'mKonusEnd', 'mBerme', 'mSolltiefe',
+      'st1Hoehe',
+      'st1Rf',
+      'st2Hoehe',
+      'st2Rf',
+      'mKonusAnf',
+      'mKonusEnd',
+      'mBerme',
+      'mSolltiefe',
     ];
     final hasRfFields = rfKeys.any((k) {
       final v = meta[k];
@@ -819,21 +1074,24 @@ class ExportService {
     return hasRfFields;
   }
 
-  static List<String> _augmentEsSchaeden(List<dynamic> schaeden) {
-    final list = schaeden.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
-    if (list.contains('1. Steigeisen entfernen') && list.contains('Leiter einbauen')) {
-      list.add('Leiter einbau möglich');
-    }
-    return list;
+  static List<String> _cleanSchaeden(List<dynamic> schaeden) {
+    return schaeden
+        .map((e) => e.toString().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
   }
 
   static String _metaTitel(Map<String, dynamic> meta) {
     final typ = (meta['typ'] as String?) ?? 'DIV';
     final bool keinBefund = meta['keinBefund'] == true;
-    final List<dynamic> schaedenListRaw = (meta['schaeden'] as List<dynamic>?) ?? const [];
+    final List<dynamic> schaedenListRaw =
+        (meta['schaeden'] as List<dynamic>?) ?? const [];
     final schaeden = typ == 'ES'
-      ? _augmentEsSchaeden(schaedenListRaw)
-      : schaedenListRaw.map((e) => e.toString()).where((s) => s.trim().isNotEmpty).toList();
+        ? _cleanSchaeden(schaedenListRaw)
+        : schaedenListRaw
+              .map((e) => e.toString())
+              .where((s) => s.trim().isNotEmpty)
+              .toList();
 
     if (keinBefund) return 'Kein Befund';
 
@@ -842,14 +1100,22 @@ class ExportService {
     }
 
     // Typ-spezifische Titel
-    if (typ == 'G' || typ == 'VS') {
+    if (typ == 'G' || typ == 'VG' || typ == 'VS') {
       // Im Gesamtbericht: nur Hinweis, was noch gebraucht wird.
       final missing = <String>[];
-      final wasser = (meta['wasserstand'] ?? meta['wasser_cm'] ?? '').toString().trim();
-      final tiefe = (meta['grubentiefe'] ?? meta['tiefe_cm'] ?? '').toString().trim();
+      final wasser = (meta['wasserstand'] ?? meta['wasser_cm'] ?? '')
+          .toString()
+          .trim();
+      final tiefe = (meta['grubentiefe'] ?? meta['tiefe_cm'] ?? '')
+          .toString()
+          .trim();
       final anschlussJa = meta['anschlussJa'] == true;
-      final anschlussRaw = (meta['anschluss'] ?? '').toString().trim().toLowerCase();
-      final hasAnschlussValue = anschlussJa || anschlussRaw == 'ja' || anschlussRaw == 'nein';
+      final anschlussRaw = (meta['anschluss'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      final hasAnschlussValue =
+          anschlussJa || anschlussRaw == 'ja' || anschlussRaw == 'nein';
       final anschlussIstJa = anschlussJa || anschlussRaw == 'ja';
       final teller = (meta['teller'] ?? '').toString().trim();
 
@@ -872,7 +1138,9 @@ class ExportService {
 
   static String _deckelart(Map<String, dynamic> meta) {
     // SSK: aus sskTyp oder gruppe/auspraegung ableiten
-    final sskTyp = (meta['sskTyp'] ?? meta['Deckelart'] ?? '').toString().trim();
+    final sskTyp = (meta['sskTyp'] ?? meta['Deckelart'] ?? '')
+        .toString()
+        .trim();
     if (sskTyp.isNotEmpty) return sskTyp;
     final typ = (meta['typ'] as String?) ?? '';
     if (typ == 'SSK') {
@@ -887,18 +1155,26 @@ class ExportService {
         return 'Weitere Hersteller - $auspr';
       }
     }
-    // VS/ES/Grube: Deckel/Deckelart falls vorhanden
-    if (typ == 'VS' || typ == 'G' || typ == 'ES') {
-      final deckel = (meta['deckel'] ?? meta['deckelart'] ?? '').toString().trim();
+    // VG/ES/Grube: Deckel/Deckelart falls vorhanden
+    if (typ == 'VG' || typ == 'VS' || typ == 'G' || typ == 'ES') {
+      final deckel = (meta['deckel'] ?? meta['deckelart'] ?? '')
+          .toString()
+          .trim();
       if (deckel.isNotEmpty) return deckel;
     }
-    // Lüftung: Alt/Neu als Deckelart anzeigen
-    if (typ == 'LÜ') {
+    // Lueftung: echter Deckel bei Neu, Alt/Neu nur als Fallback.
+    if (typ == 'LÃœ') {
+      final deckel = (meta['deckel'] ?? meta['deckelart'] ?? '')
+          .toString()
+          .trim();
+      if (deckel.isNotEmpty) return deckel;
       final art = (meta['art'] ?? meta['typ_detail'] ?? '').toString().trim();
       if (art.isNotEmpty) return art;
     }
     // SK: ggf. deckelart vorhanden, sonst leer
-    final deckel = (meta['deckel'] ?? meta['deckelart'] ?? '').toString().trim();
+    final deckel = (meta['deckel'] ?? meta['deckelart'] ?? '')
+        .toString()
+        .trim();
     if (deckel.isNotEmpty) return deckel;
     return '';
   }
@@ -919,13 +1195,17 @@ class ExportService {
     }
     if (typ == 'ES') {
       // Für Gesamt-PDF soll der Zugang (Seiteneinstieg/Direkteinstieg) angezeigt werden
-      final eingang = (meta['eingang'] ?? meta['Eingang'] ?? '').toString().trim();
+      final eingang = (meta['eingang'] ?? meta['Eingang'] ?? '')
+          .toString()
+          .trim();
       if (eingang.isNotEmpty) return eingang;
       final einsteigart = (meta['einsteigart'] ?? '').toString().trim();
       if (einsteigart.isNotEmpty) return einsteigart;
     }
-    if (typ == 'VS' || typ == 'G') {
-      final grubentyp = (meta['grubentyp'] ?? meta['grubenart'] ?? '').toString().trim();
+    if (typ == 'VG' || typ == 'VS' || typ == 'G') {
+      final grubentyp = (meta['grubentyp'] ?? meta['grubenart'] ?? '')
+          .toString()
+          .trim();
       if (grubentyp.isNotEmpty) return grubentyp;
     }
     if (typ == 'LÜ') {
@@ -943,27 +1223,118 @@ class ExportService {
   }
 
   static String _mediaHint(Map<String, dynamic> meta) {
-    final fotos = (meta['mediaFotos'] as List<dynamic>?)?.length ?? 0;
-    final videos = (meta['mediaVideos'] as List<dynamic>?)?.length ?? 0;
-    final audios = (meta['mediaAudios'] as List<dynamic>?)?.length ?? 0;
-    final types = <String>[];
-    if (fotos > 0) types.add('Foto');
-    if (videos > 0) types.add('Video');
-    if (audios > 0) types.add('Audio');
-    if (types.isEmpty) return '';
-    return types.join(' + ');
+    return mediaDescriptionFromMeta(meta);
+  }
+
+  static String mediaDescriptionFromMeta(Map<String, dynamic> meta) {
+    final counts = <String, int>{
+      'foto': 0,
+      'video': 0,
+      'audio': 0,
+      'pdf': 0,
+      'office': 0,
+      'other': 0,
+    };
+    final seen = <String>{};
+
+    void addRefs(dynamic raw, String fallbackKind) {
+      if (raw is! List) return;
+      for (final item in raw) {
+        final map = item is Map ? Map<dynamic, dynamic>.from(item) : null;
+        final value = map == null
+            ? item.toString().trim()
+            : (map['value'] ??
+                      map['name'] ??
+                      map['fileName'] ??
+                      map['path'] ??
+                      '')
+                  .toString()
+                  .trim();
+        if (value.isEmpty || !seen.add(value)) continue;
+        final hint = map == null
+            ? fallbackKind
+            : (map['kind'] ?? fallbackKind).toString().trim().toLowerCase();
+        final kind = _mediaKind(value, hint);
+        counts[kind] = (counts[kind] ?? 0) + 1;
+      }
+    }
+
+    addRefs(meta['mediaBindings'], '');
+    addRefs(meta['mediaFotos'], 'foto');
+    addRefs(meta['mediaVideos'], 'video');
+    addRefs(meta['mediaAudios'], 'audio');
+    addRefs(meta['mediaPdfs'], 'pdf');
+
+    final parts = <String>[];
+    void addCount(String key, String singular, String plural) {
+      final count = counts[key] ?? 0;
+      if (count > 0) parts.add('$count ${count == 1 ? singular : plural}');
+    }
+
+    addCount('foto', 'Foto', 'Fotos');
+    addCount('video', 'Video', 'Videos');
+    addCount('audio', 'Audio-Datei', 'Audio-Dateien');
+    addCount('pdf', 'PDF-Datei', 'PDF-Dateien');
+    addCount('office', 'Office-Datei', 'Office-Dateien');
+    addCount('other', 'weitere Datei', 'weitere Dateien');
+
+    return parts.isEmpty ? '' : 'Medien / Dateien: ${parts.join(', ')}';
+  }
+
+  static String _mediaKind(String value, String hint) {
+    if (const {'foto', 'video', 'audio'}.contains(hint)) return hint;
+
+    final lower = value.toLowerCase();
+    if (lower.startsWith('data:image/')) return 'foto';
+    if (lower.startsWith('data:video/')) return 'video';
+    if (lower.startsWith('data:audio/')) return 'audio';
+    if (lower.startsWith('data:application/pdf')) return 'pdf';
+    if (lower.contains('wordprocessingml') ||
+        lower.contains('spreadsheetml') ||
+        lower.contains('presentationml') ||
+        lower.contains('msword') ||
+        lower.contains('excel') ||
+        lower.contains('powerpoint')) {
+      return 'office';
+    }
+
+    final ext =
+        RegExp(r'\.([a-z0-9]+)(?:\?|#|$)').firstMatch(lower)?.group(1) ?? '';
+    if (const {'jpg', 'jpeg', 'png', 'webp', 'heic'}.contains(ext)) {
+      return 'foto';
+    }
+    if (const {'mp4', 'mov', 'avi', 'mkv'}.contains(ext)) return 'video';
+    if (const {'mp3', 'wav', 'm4a', 'aac'}.contains(ext)) return 'audio';
+    if (ext == 'pdf') return 'pdf';
+    if (const {
+      'doc',
+      'docx',
+      'xls',
+      'xlsx',
+      'csv',
+      'ppt',
+      'pptx',
+    }.contains(ext)) {
+      return 'office';
+    }
+    if (hint == 'pdf') return 'pdf';
+    return 'other';
   }
 
   static String _mergeBemerkung(String bemerkung, String mediaHint) {
-    if (mediaHint.isEmpty) return bemerkung;
-    if (bemerkung.isEmpty) return mediaHint;
-    if (bemerkung.contains('Medien:')) return bemerkung; // doppelt vermeiden
-    return '$bemerkung | $mediaHint';
+    final base = bemerkung.trim();
+    if (mediaHint.isEmpty) return base;
+    if (base.isEmpty || base == '—') return mediaHint;
+    if (base.contains('Medien / Dateien:')) return base;
+    return '$base | $mediaHint';
   }
 
   static String _csvJoin(dynamic value) {
     if (value is List) {
-      return value.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(', ');
+      return value
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .join(', ');
     }
     return (value ?? '').toString().trim();
   }
@@ -977,12 +1348,30 @@ class ExportService {
     return '"$escaped"';
   }
 
+  static String _gesamtberichtTypLabel(String typ) {
+    final upper = typ.trim().toUpperCase();
+    if (upper == 'VS' ||
+        upper == 'VG' ||
+        upper == 'G' ||
+        upper.contains('SICKERGRUBE') ||
+        upper.contains('GRUBE')) {
+      return 'VG';
+    }
+    final trimmed = typ.trim();
+    return trimmed.isEmpty ? 'DIV' : trimmed;
+  }
 
   /// Gruppiert Positionen nach Abteilung.
   /// Unterstützt neue 312/313 Abteilungen und alte Kurznamen
   static Map<String, List<PlannedPosition>> _groupPositionsByAbteilung(
-      List<PlannedPosition> positions) {
+    List<PlannedPosition> positions,
+  ) {
     final groups = <String, List<PlannedPosition>>{};
+
+    void addPosition(String group, PlannedPosition position) {
+      final list = groups.putIfAbsent(group, () => <PlannedPosition>[]);
+      if (!list.contains(position)) list.add(position);
+    }
 
     // Positionen nach ihren Abteilungen verteilen
     for (final pos in positions) {
@@ -992,10 +1381,7 @@ class ExportService {
       // Neue 312/313 Struktur: einzelnes 'abteilung' Feld
       final abteilungSingle = (meta['abteilung'] as String?)?.trim();
       if (abteilungSingle != null && abteilungSingle.isNotEmpty) {
-        if (!groups.containsKey(abteilungSingle)) {
-          groups[abteilungSingle] = <PlannedPosition>[];
-        }
-        groups[abteilungSingle]!.add(pos);
+        addPosition(abteilungSingle, pos);
       }
 
       // Fallback: 'abteilungen' Liste (Plural) - für neue 312/313 Struktur
@@ -1004,23 +1390,21 @@ class ExportService {
         for (final ab in abteilungenRaw) {
           final abStr = ab.toString().trim();
           if (abStr.isEmpty) continue;
-          
+
           // Neue 312/313 Abteilungen direkt verwenden
           if (abStr.startsWith('312') || abStr.startsWith('313')) {
-            if (!groups.containsKey(abStr)) {
-              groups[abStr] = <PlannedPosition>[];
-            }
-            groups[abStr]!.add(pos);
+            addPosition(abStr, pos);
             continue;
           }
-          
+
           // Fallback für alte Kurznamen (falls noch vorhanden)
           String? key;
           if (abStr.startsWith('Maurer') || abStr == 'M') {
             key = 'M';
           } else if (abStr.startsWith('Schlosser') || abStr == 'S') {
             key = 'S';
-          } else if (abStr.startsWith('Baukontrollmeister') || abStr == 'BAUKO') {
+          } else if (abStr.startsWith('Baukontrollmeister') ||
+              abStr == 'BAUKO') {
             key = 'BAUKO';
           } else if (abStr == 'NIS') {
             key = 'NIS';
@@ -1029,10 +1413,7 @@ class ExportService {
           }
 
           if (key != null) {
-            if (!groups.containsKey(key)) {
-              groups[key] = <PlannedPosition>[];
-            }
-            groups[key]!.add(pos);
+            addPosition(key, pos);
           }
         }
       }
@@ -1055,19 +1436,21 @@ class ExportService {
         return null;
       }
     }
-    
+
     // Handle asset file paths (App/ES/ES_Bild.png) - for test data
     if (dataUrl.startsWith('App/')) {
       try {
         // rootBundle.load automatically adds 'assets/' prefix, so use path as-is
         final ByteData data = await rootBundle.load(dataUrl);
-        debugPrint('[_decodeDataUrl] Loaded asset: $dataUrl (${data.lengthInBytes} bytes)');
+        debugPrint(
+          '[_decodeDataUrl] Loaded asset: $dataUrl (${data.lengthInBytes} bytes)',
+        );
         return data.buffer.asUint8List();
       } catch (_) {
         return null;
       }
     }
-    
+
     return null;
   }
 
@@ -1076,12 +1459,10 @@ class ExportService {
     Archive archive,
     String mainFolder,
     Map<String, List<PlannedPosition>> abteilungsMap,
-    String? erfasser,
-    {
+    String? erfasser, {
     required String evnr,
     required String? strasse,
-  }
-  ) {
+  }) {
     final informed = abteilungsMap.keys.toList()..sort();
     for (final abteilung in abteilungsMap.keys) {
       final positions = abteilungsMap[abteilung] ?? [];
@@ -1099,12 +1480,14 @@ class ExportService {
       final emailBytes = utf8.encode(emailContent);
 
       // Dateiname: Abteilung.txt (z.B. 312_IZ_AR.txt)
-      final fileName = '${abteilung.replaceAll(' ', '_')}.txt';
-      archive.addFile(ArchiveFile(
-        '$mainFolder/Schriftverkehr/Vorlagen/$fileName',
-        emailBytes.length,
-        emailBytes,
-      ));
+      final fileName = '${_safePathSegment(abteilung)}.txt';
+      archive.addFile(
+        ArchiveFile(
+          '$mainFolder/Schriftverkehr/Vorlagen/$fileName',
+          emailBytes.length,
+          emailBytes,
+        ),
+      );
     }
 
     if (informed.isNotEmpty) {
@@ -1116,11 +1499,13 @@ class ExportService {
         strasse: strasse,
       );
       final emailBytes = utf8.encode(emailContent);
-      archive.addFile(ArchiveFile(
-        '$mainFolder/Schriftverkehr/Vorlagen/BauKo_Abschluss.txt',
-        emailBytes.length,
-        emailBytes,
-      ));
+      archive.addFile(
+        ArchiveFile(
+          '$mainFolder/Schriftverkehr/Vorlagen/BauKo_Abschluss.txt',
+          emailBytes.length,
+          emailBytes,
+        ),
+      );
     }
   }
 
@@ -1132,8 +1517,7 @@ class ExportService {
     required String ordnerLink,
     required String evnr,
     required String? strasse,
-  }
-  ) {
+  }) {
     final buffer = StringBuffer();
     final str = (strasse ?? 'Strasse').trim();
 
@@ -1142,7 +1526,9 @@ class ExportService {
 
     buffer.writeln('Hallo zusammen,');
     buffer.writeln();
-    buffer.writeln('im Rahmen der Erfassung sind mir folgende Punkte aufgefallen:');
+    buffer.writeln(
+      'im Rahmen der Erfassung sind mir folgende Punkte aufgefallen:',
+    );
     buffer.writeln();
     for (final pos in positions) {
       final posNum = (pos.positionsnummer ?? '').trim().isNotEmpty
@@ -1158,8 +1544,12 @@ class ExportService {
         objektart = _objektartLabel(typ);
 
         final keinBefund = meta['keinBefund'] == true;
-        final schaedenListRaw = (meta['schaeden'] as List<dynamic>?) ?? const [];
-        final schaeden = schaedenListRaw.map((e) => e.toString()).where((s) => s.trim().isNotEmpty).toList();
+        final schaedenListRaw =
+            (meta['schaeden'] as List<dynamic>?) ?? const [];
+        final schaeden = schaedenListRaw
+            .map((e) => e.toString())
+            .where((s) => s.trim().isNotEmpty)
+            .toList();
         if (keinBefund) {
           beobachtung = 'Kein Befund';
         } else if (schaeden.isNotEmpty) {
@@ -1177,7 +1567,9 @@ class ExportService {
       buffer.writeln('- **$posNum ($objektart):** $beobachtung');
     }
     buffer.writeln();
-    buffer.writeln('Weitere Unterlagen und Details sind im folgenden Ordner abgelegt:');
+    buffer.writeln(
+      'Weitere Unterlagen und Details sind im folgenden Ordner abgelegt:',
+    );
     buffer.writeln('**$ordnerLink**');
     buffer.writeln();
     buffer.writeln('Viele Grüße');
@@ -1204,13 +1596,17 @@ class ExportService {
     buffer.writeln();
     buffer.writeln('Hallo BauKo,');
     buffer.writeln();
-    buffer.writeln('die Abteilungen wurden informiert. Folgende Stellen wurden angeschrieben:');
+    buffer.writeln(
+      'die Abteilungen wurden informiert. Folgende Stellen wurden angeschrieben:',
+    );
     buffer.writeln();
     for (final a in abteilungen) {
       buffer.writeln('- $a');
     }
     buffer.writeln();
-    buffer.writeln('Weitere Unterlagen und Details sind im folgenden Ordner abgelegt:');
+    buffer.writeln(
+      'Weitere Unterlagen und Details sind im folgenden Ordner abgelegt:',
+    );
     buffer.writeln('**$ordnerLink**');
     buffer.writeln();
     buffer.writeln('Viele Gruesse');
@@ -1228,9 +1624,9 @@ class ExportService {
       case 'ES':
         return 'Einsteigschacht';
       case 'VS':
-        return 'Verteilschacht';
+      case 'VG':
       case 'G':
-        return 'Grube';
+        return 'VG';
       case 'LÜ':
         return 'Lueftung';
       case 'SSK':
@@ -1296,4 +1692,3 @@ class ExportService {
     }
   }
 }
-

@@ -58,10 +58,10 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
   String _steigeisenStand = 'Alt';
   bool _fallschutzVorhanden = false;
 
-  String _deckel = 'Mannloch';
+  String _deckel = kStandardSchachtDeckelart;
   final _deckelBemCtrl = TextEditingController();
   String _kl = 'D';
-  final List<String> _deckelOpts = const ['Mannloch', 'Begu DN 625', 'Bemerkung'];
+  final List<String> _deckelOpts = kSchachtDeckelartOptions;
 
   final Set<String> _schaeden = <String>{};
   bool _keinBefund = false;
@@ -96,9 +96,10 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
   final _obflBemCtrl = TextEditingController();
 
   // Schachtkopfdaten & Maße
-  final Set<String> _schachtkopf = <String>{};
+  final Set<String> _schachtkopf = <String>{kStandardSchachtDeckelart};
   final _uebergangsplatteBemCtrl = TextEditingController();
   final _sonstigeTypenBemCtrl = TextEditingController();
+  String _massSchachtkopf = '80';
   final _massAusgleichCtrl = TextEditingController();
   final _massKonusAnfCtrl = TextEditingController();
   final _massKonusEndCtrl = TextEditingController();
@@ -135,7 +136,12 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     Set<String> toSet(dynamic v) {
       if (v == null) return <String>{};
       if (v is List) return v.cast<String>().toSet();
-      if (v is String && v.isNotEmpty) return v.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet();
+      if (v is String && v.isNotEmpty)
+        return v
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toSet();
       return <String>{};
     }
 
@@ -149,8 +155,10 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     _einsteigart = (meta['einsteigart'] as String?) ?? _einsteigart;
     _steigeisenStand = (meta['steigeisenStand'] as String?) ?? 'Alt';
     _fallschutzVorhanden = (meta['fallschutz'] == true);
-    _deckel = (meta['deckel'] as String?) ?? _deckel;
-    _deckelBemCtrl.text = (meta['deckelBem'] as String?) ?? '';
+    _deckel = normalizeSchachtDeckelart(meta['deckel'], fallback: _deckel);
+    _deckelBemCtrl.text =
+        (meta['deckelBem'] as String?) ??
+        schachtDeckelBemerkung(meta['deckel']);
     _kl = (meta['kl'] as String?) ?? _kl;
     _schaeden.clear();
     _schaeden.addAll(toSet(meta['schaeden']));
@@ -179,6 +187,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     _schachtkopf.addAll(toSet(meta['schachtkopf']));
     _uebergangsplatteBemCtrl.text = (meta['uebergangsBem'] as String?) ?? '';
     _massAusgleichCtrl.text = (meta['mAusgleich'] as String?) ?? '';
+    _massSchachtkopf = _normalizeSchachtkopfMass(
+      meta['mSchachtkopf'] ?? meta['mass_schachtkopf'],
+    );
     _massKonusAnfCtrl.text = (meta['mKonusAnf'] as String?) ?? '';
     _massKonusEndCtrl.text = (meta['mKonusEnd'] as String?) ?? '';
     _massBermeCtrl.text = (meta['mBerme'] as String?) ?? '';
@@ -190,9 +201,12 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     _fotos.clear();
     _videos.clear();
     _audios.clear();
-    final fotos = (meta['mediaFotos'] as List<dynamic>?)?.cast<String>() ?? <String>[];
-    final videos = (meta['mediaVideos'] as List<dynamic>?)?.cast<String>() ?? <String>[];
-    final audios = (meta['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final fotos =
+        (meta['mediaFotos'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final videos =
+        (meta['mediaVideos'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final audios =
+        (meta['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
     _fotos.addAll(fotos);
     _videos.addAll(videos);
     _audios.addAll(audios);
@@ -220,6 +234,22 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     _massSolltiefeCtrl.dispose();
     _bemCtrl.dispose();
     super.dispose();
+  }
+
+  String _normalizeSchachtkopfMass(dynamic value) {
+    final raw = value?.toString().trim().replaceAll('.', ',') ?? '';
+    if (raw.startsWith('62')) return '62,5';
+    if (raw.startsWith('80')) return '80';
+    return '80';
+  }
+
+  bool get _needsSchachtkopfMassChoice =>
+      _deckel != kStandardSchachtDeckelart && _deckel != 'Mannloch';
+
+  String get _effectiveSchachtkopfMass {
+    if (_deckel == kStandardSchachtDeckelart) return '62,5';
+    if (_deckel == 'Mannloch') return '';
+    return _massSchachtkopf;
   }
 
   // ----------------------------- Helpers -----------------------------
@@ -265,9 +295,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
         _audios.add(audioData);
         setState(() {});
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Audio hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Audio hinzugefügt')));
         }
       }
     }
@@ -313,10 +343,14 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: Text(
-                      recognizedText.isEmpty ? 'Erkannter Text wird hier angezeigt' : recognizedText,
+                      recognizedText.isEmpty
+                          ? 'Erkannter Text wird hier angezeigt'
+                          : recognizedText,
                       style: TextStyle(
                         fontSize: 14,
-                        color: recognizedText.isEmpty ? Colors.grey : Colors.black,
+                        color: recognizedText.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
                       ),
                     ),
                   ),
@@ -372,9 +406,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Diktat hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Diktat hinzugefügt')));
         }
       }
     });
@@ -391,7 +425,8 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
 
   bool get _rfActive => _schaeden.contains('Keine Rückenfreiheit');
 
-  bool get _klUnterD => _deckel != 'Mannloch' && (_kl == 'A' || _kl == 'B' || _kl == 'C');
+  bool get _klUnterD =>
+      _deckel != 'Mannloch' && (_kl == 'A' || _kl == 'B' || _kl == 'C');
 
   void _applyKlUnterDSchaden() {
     if (_deckel == 'Mannloch') {
@@ -410,9 +445,6 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     final result = <String>[];
     for (final name in _schaedenList) {
       if (_schaeden.contains(name)) result.add(name);
-    }
-    if (_schaeden.contains('1. Steigeisen entfernen') && _schaeden.contains('Leiter einbauen')) {
-      result.add('Leiter einbau möglich');
     }
     return result;
   }
@@ -440,9 +472,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     );
     if (!uniqueCheck.isValid) {
       if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uniqueCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(uniqueCheck.message!)));
       return false;
     }
 
@@ -453,7 +485,11 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
   Future<void> _onSave() async {
     if (_session == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.')),
+        const SnackBar(
+          content: Text(
+            'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+          ),
+        ),
       );
       return;
     }
@@ -483,9 +519,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
       message: '"Kein Befund" schließt Schäden aus.',
     );
     if (!keinBefundCheck.isValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(keinBefundCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(keinBefundCheck.message!)));
       return;
     }
 
@@ -508,10 +544,15 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
         : null;
 
     // GPS nur einmal beim Speichern erfassen (flüssig für UI)
-    final gps = await GpsService.getCurrentLocation();
+    final gps = hasNichtImNis(_verfuegbarkeit)
+        ? ((await GpsService.getCurrentLocation()) ??
+              widget.initialMeta?['gps'])
+        : null;
 
-    final deckelLabel =
-      _deckel == 'Bemerkung' ? 'Bemerkung: ${_deckelBemCtrl.text.trim()}' : _deckel;
+    final deckelLabel = buildSchachtDeckelartLabel(
+      _deckel,
+      _deckelBemCtrl.text,
+    );
 
     // Persistenz
     final idNr = _idNrCtrl.text.trim();
@@ -521,12 +562,12 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
       required: _rfActive,
     );
     if (idValidation != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(idValidation)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(idValidation)));
       return;
     }
-    
+
     final meta = {
       'typ': 'ES',
       'evnr': _session!.evnr,
@@ -534,6 +575,7 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
       'erfasser': _session!.erfasser,
       'zeitIso': _session!.zeitIso,
       'wetter': _session!.wetter,
+      'temperatur': _session!.temperatur,
       'posNr': pos,
       'idNr': _idNrCtrl.text.trim(),
       'verfuegbarkeit': _verfuegbarkeit.join(', '),
@@ -558,8 +600,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
       'obflBem': _obflBemCtrl.text.trim(),
       'schachtkopf': _schachtkopf.join(', '),
       'uebergangsBem': _uebergangsplatteBemCtrl.text.trim(),
+      'mSchachtkopf': _effectiveSchachtkopfMass,
       'abteilungen': _abteilungen.toList(),
-      'mAusgleich': _rfActive ? _massAusgleichCtrl.text.trim() : '',
+      'mAusgleich': '',
       'mKonusAnf': _rfActive ? _massKonusAnfCtrl.text.trim() : '',
       'mKonusEnd': _rfActive ? _massKonusEndCtrl.text.trim() : '',
       'mBerme': _rfActive ? _massBermeCtrl.text.trim() : '',
@@ -574,7 +617,8 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     };
 
     // If editing an existing meta, preserve its storageKey and createdAt
-    final metaKey = existingKey ?? 'obj_${_session!.evnr}_${_session!.strasse}_${pos}_ES';
+    final metaKey =
+        existingKey ?? 'obj_${_session!.evnr}_${_session!.strasse}_${pos}_ES';
     if (existingKey != null) {
       meta['createdAt'] = widget.initialMeta!['createdAt'] ?? meta['createdAt'];
     }
@@ -588,7 +632,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     if (_einsteigart == 'Steigeisen') {
       spezialParts.add('Steigeisen: $_steigeisenStand');
     } else if (_einsteigart == 'Steigbaum') {
-      spezialParts.add('Steigbaum: Fallschutz ${_fallschutzVorhanden ? 'Ja' : 'Nein'}');
+      spezialParts.add(
+        'Steigbaum: Fallschutz ${_fallschutzVorhanden ? 'Ja' : 'Nein'}',
+      );
     }
     if (_rfActive) {
       final rf1 = _rf1Ctrl.text.trim();
@@ -612,12 +658,18 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
       type: EntryType.einsteigschacht,
       evnr: _session!.evnr,
       positionsnummer: pos,
-      titel: _keinBefund ? 'Kein Befund' : (schaedenDisplay.isNotEmpty ? schaedenDisplay.join(', ') : null),
+      titel: _keinBefund
+          ? 'Kein Befund'
+          : (schaedenDisplay.isNotEmpty ? schaedenDisplay.join(', ') : null),
       zeit: DateTime.tryParse(_session!.zeitIso),
       strasse: _session!.strasse,
       bemerkung: bemerkungText.isEmpty ? null : bemerkungText,
-      verfuegbarkeitLabel: _verfuegbarkeit.isEmpty ? null : _verfuegbarkeit.join(', '),
-      statusVorOrtLabel: _statusVorOrt.isEmpty ? null : _statusVorOrt.join(', '),
+      verfuegbarkeitLabel: _verfuegbarkeit.isEmpty
+          ? null
+          : _verfuegbarkeit.join(', '),
+      statusVorOrtLabel: _statusVorOrt.isEmpty
+          ? null
+          : _statusVorOrt.join(', '),
       notizen: mediaNote,
       spezial: spezialParts.isEmpty ? null : spezialParts.join(' • '),
       deckelart: deckelLabel,
@@ -636,21 +688,27 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     fields['EVNr'] = _session!.evnr;
     fields['Straße'] = _session!.strasse;
     fields['Erfasser:in'] = _session!.erfasser;
-    fields['Datum/Zeit'] = df.format(DateTime.tryParse(_session!.zeitIso) ?? DateTime.now());
+    fields['Datum/Zeit'] = df.format(
+      DateTime.tryParse(_session!.zeitIso) ?? DateTime.now(),
+    );
     fields['Wetter'] = _session!.wetter;
+    fields['Temperatur'] = formatTemperatureValue(_session!.temperatur);
     fields['Positionsnummer'] = pos;
 
     // Optionale Felder (nur wenn gefüllt)
     if (idNr.isNotEmpty) fields['ID-Nummer'] = idNr;
-    if (_verfuegbarkeit.isNotEmpty) fields['Verfügbarkeit'] = _verfuegbarkeit.join(', ');
-    if (_statusVorOrt.isNotEmpty) fields['Status vor Ort'] = _statusVorOrt.join(', ');
+    if (_verfuegbarkeit.isNotEmpty)
+      fields['Verfügbarkeit'] = _verfuegbarkeit.join(', ');
+    if (_statusVorOrt.isNotEmpty)
+      fields['Status vor Ort'] = _statusVorOrt.join(', ');
 
     // Standard-Felder
     fields['Eingang'] = _eingang;
     if (_einsteigart == 'Steigeisen') {
       fields['Einsteigart'] = 'Steigeisen – $_steigeisenStand';
     } else if (_einsteigart == 'Steigbaum') {
-      fields['Einsteigart'] = 'Steigbaum – Fallschutz: ${_fallschutzVorhanden ? 'Ja' : 'Nein'}';
+      fields['Einsteigart'] =
+          'Steigbaum – Fallschutz: ${_fallschutzVorhanden ? 'Ja' : 'Nein'}';
     } else {
       fields['Einsteigart'] = _einsteigart;
     }
@@ -659,7 +717,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     if (_deckel != 'Mannloch') {
       fields['KL'] = _kl;
     }
-    fields['Schäden'] = _keinBefund ? 'Kein Befund' : (schaedenDisplay.isEmpty ? '' : schaedenDisplay.join(', '));
+    fields['Schäden'] = _keinBefund
+        ? 'Kein Befund'
+        : (schaedenDisplay.isEmpty ? '' : schaedenDisplay.join(', '));
 
     // Objektattribute (nur wenn gefüllt)
     if (_durchmesserCtrl.text.trim().isNotEmpty) {
@@ -695,10 +755,6 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
 
     // Maße nur wenn RF aktiv
     if (_rfActive) {
-      if (_massAusgleichCtrl.text.trim().isNotEmpty) {
-        fields['815'] = _massAusgleichCtrl.text.trim();
-      }
-
       if (_massSteigeisen1Ctrl.text.trim().isNotEmpty) {
         fields['1. Steigeisen – Steighöhe'] = _massSteigeisen1Ctrl.text.trim();
       }
@@ -738,7 +794,11 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Einsteigschacht gespeichert (im Gesamt-Export enthalten).')),
+      const SnackBar(
+        content: Text(
+          'Einsteigschacht gespeichert (im Gesamt-Export enthalten).',
+        ),
+      ),
     );
     Navigator.pop(context);
   }
@@ -746,7 +806,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
   // ----------------------------- UI -----------------------------
   Future<void> _openNisPlan() async {
     final evnr = _session?.evnr ?? '';
-    final nis = evnr.trim().isNotEmpty ? await SessionStore.loadNisPlanForEvnr(evnr) : null;
+    final nis = evnr.trim().isNotEmpty
+        ? await SessionStore.loadNisPlanForEvnr(evnr)
+        : null;
     if (!mounted) return;
     final base64 = nis?.pdfBase64 ?? _session?.nisPlanPdf;
     if (base64 == null || base64.isEmpty) {
@@ -782,7 +844,7 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
             '- Danach schrittweise Eingangsart, Deckel, Schäden, Details und Maße erfassen.\n'
             '- Medien (Foto/Video/Audio/PDF) können im letzten Schritt ergänzt werden.\n\n'
             'Hinweis:\n'
-            'Die Daten werden im Modul gespeichert. Dateien werden erst im Bericht beim Export erzeugt.'
+            'Die Daten werden im Modul gespeichert. Dateien werden erst im Bericht beim Export erzeugt.',
           ),
         ),
         actions: [
@@ -803,6 +865,7 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Einsteigschacht (ES)'),
+        centerTitle: true,
         actions: [
           TextButton.icon(
             onPressed: _openNisPlan,
@@ -816,822 +879,1127 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
             label: const Text('Beschreibung'),
             style: TextButton.styleFrom(foregroundColor: Colors.black),
           ),
-
         ],
       ),
       body: s == null
-          ? const Center(child: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.'))
+          ? const Center(
+              child: Text(
+                'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+              ),
+            )
           : Form(
               key: _formKey,
-              child: Stepper(
-                currentStep: _currentStep,
-                onStepTapped: (step) => setState(() => _currentStep = step),
-                onStepContinue: () {
-                  if (_currentStep == 0) {
-                    if (!_formKey.currentState!.validate()) return;
-                  }
-                  if (_currentStep < 5) {
-                    setState(() => _currentStep += 1);
-                  } else {
-                    _onSave();
-                  }
-                },
-                onStepCancel: () {
-                  if (_currentStep > 0) {
-                    setState(() => _currentStep -= 1);
-                  }
-                },
-                controlsBuilder: (context, details) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Row(
-                      children: [
-                        FilledButton(
-                          onPressed: details.onStepContinue,
-                          child: Text(_currentStep == 5 ? 'Speichern' : 'Weiter'),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton(
-                          onPressed: details.onStepCancel,
-                          child: const Text('Zurück'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                steps: [
-                  // Schritt 1: Basis-Daten
-                  Step(
-                    title: const Text('1. Basis-Daten'),
-                    isActive: _currentStep >= 0,
-                    state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Schachtdaten', style: Theme.of(context).textTheme.titleMedium),
-                                const SizedBox(height: 6),
-                                _kv('EVNr', s.evnr),
-                                _kv('Straße', s.strasse),
-                                _kv('Erfasser:in', s.erfasser),
-                                _kv('Datum/Zeit', df.format(DateTime.tryParse(s.zeitIso) ?? DateTime.now())),
-                                _kv('Wetter', _wIcon(s.wetter)),
-                              ],
+              child: Column(
+                children: [
+                  // Kopf
+                  Card(
+                    margin: const EdgeInsets.all(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Erfasser Daten',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          _kv('EVNr', s.evnr),
+                          _kv('Straße', s.strasse),
+                          _kv('Erfasser:in', s.erfasser),
+                          _kv(
+                            'Datum/Zeit',
+                            df.format(
+                              DateTime.tryParse(s.zeitIso) ?? DateTime.now(),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        ObjectGpsPanel(initialMeta: widget.initialMeta),
-                        const SizedBox(height: 12),
-                        _label('Positionsnummer *'),
-                        TextFormField(
-                          controller: _posCtrl,
-                          decoration: const InputDecoration(
-                            hintText: 'z. B. 1, 1a, 2',
-                            helperText: 'Muss eindeutig sein',
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Bitte Positionsnummer eintragen.';
-                            }
-                            return ValidationService.validatePositionField(value);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _idNrCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'ID-Nummer',
-                            hintText: '8-stellig, nur Ziffern (z. B. 12345678)',
-                            helperText: 'Optional, Pflicht nur bei "Keine Rückenfreiheit"',
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text('Verfügbarkeit', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          children: kVerfuegbarkeitOptionsAll
-                              .map((opt) => FilterChip(
-                                    label: Text(opt),
-                                    selected: _verfuegbarkeit.contains(opt),
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        if (selected) {
-                                          _verfuegbarkeit.add(opt);
-                                        } else {
-                                          _verfuegbarkeit.remove(opt);
-                                          if (opt == 'Ergänzen') _verfuegbarkeitErgaenzenCtrl.clear();
-                                        }
-                                      });
-                                    },
-                                  ))
-                              .toList(),
-                        ),
-                        if (_verfuegbarkeit.contains('Ergänzen')) ... [
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _verfuegbarkeitErgaenzenCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Ergänzen - Freitext',
-                              border: OutlineInputBorder(),
-                            ),
-                            maxLines: 2,
+                          _kv('Wetter', _wIcon(s.wetter)),
+                          _kv(
+                            'Temperatur',
+                            formatTemperatureValue(s.temperatur),
                           ),
                         ],
-                        const SizedBox(height: 12),
-                        Text('Status vor Ort', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          children: kStatusAllgemein
-                              .map((opt) => FilterChip(
-                                    label: Text(opt),
-                                    selected: _statusVorOrt.contains(opt),
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        if (selected) {
-                                          _statusVorOrt.add(opt);
-                                        } else {
-                                          _statusVorOrt.remove(opt);
-                                        }
-                                      });
-                                    },
-                                  ))
-                              .toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Schritt 2: Eingang & Deckelart
-                  Step(
-                    title: const Text('2. Eingang & Deckelart'),
-                    isActive: _currentStep >= 1,
-                    state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        Text('Eingangsart', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            ChoiceChip(
-                              label: const Text('Seiteneinstieg'),
-                              selected: _eingang == 'Seiteneinstieg',
-                              onSelected: (_) => setState(() => _eingang = 'Seiteneinstieg'),
-                            ),
-                            ChoiceChip(
-                              label: const Text('Direkteinstieg'),
-                              selected: _eingang == 'Direkteinstieg',
-                              onSelected: (_) => setState(() => _eingang = 'Direkteinstieg'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Einsteigart', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            ChoiceChip(
-                              label: const Text('Leiter'),
-                              selected: _einsteigart == 'Leiter',
-                              onSelected: (_) => setState(() => _einsteigart = 'Leiter'),
-                            ),
-                            ChoiceChip(
-                              label: const Text('Steigeisen'),
-                              selected: _einsteigart == 'Steigeisen',
-                              onSelected: (_) => setState(() => _einsteigart = 'Steigeisen'),
-                            ),
-                            ChoiceChip(
-                              label: const Text('Steigbaum'),
-                              selected: _einsteigart == 'Steigbaum',
-                              onSelected: (_) => setState(() => _einsteigart = 'Steigbaum'),
-                            ),
-                          ],
-                        ),
-                        if (_einsteigart == 'Steigeisen') ...[
-                          const SizedBox(height: 12),
-                          Text('Steigeisenzustand', style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              ChoiceChip(
-                                label: const Text('Alt'),
-                                selected: _steigeisenStand == 'Alt',
-                                onSelected: (_) => setState(() => _steigeisenStand = 'Alt'),
-                              ),
-                              ChoiceChip(
-                                label: const Text('Neu'),
-                                selected: _steigeisenStand == 'Neu',
-                                onSelected: (_) => setState(() => _steigeisenStand = 'Neu'),
-                              ),
-                            ],
-                          ),
-                        ],
-                        if (_einsteigart == 'Steigbaum') ...[
-                          const SizedBox(height: 12),
-                          Text('Fallschutz vorhanden?', style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              ChoiceChip(
-                                label: const Text('Ja'),
-                                selected: _fallschutzVorhanden,
-                                onSelected: (_) => setState(() => _fallschutzVorhanden = true),
-                              ),
-                              ChoiceChip(
-                                label: const Text('Nein'),
-                                selected: !_fallschutzVorhanden,
-                                onSelected: (_) => setState(() => _fallschutzVorhanden = false),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        Text('Deckelart', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          initialValue: _deckel,
-                          items: _deckelOpts
-                              .map(
-                                (d) => DropdownMenuItem(
-                                  value: d,
-                                  child: Text(d == 'Bemerkung' ? 'Bemerkung (andere Hersteller)' : d),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) => setState(() {
-                            _deckel = v ?? 'DN';
-                            _applyKlUnterDSchaden();
-                          }),
-                        ),
-                        if (_deckel == 'Bemerkung') ...[
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _deckelBemCtrl,
-                            decoration: const InputDecoration(labelText: 'Hersteller/Typ'),
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        // KL-Klasse: nur wenn Deckel NICHT Mannloch ist
-                        if (_deckel != 'Mannloch') ...[
-                          Text('KL-Klasse', style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: ['A', 'B', 'C', 'D', 'E', 'F']
-                                .map(
-                                  (k) => ChoiceChip(
-                                    label: Text('KL $k'),
-                                    selected: _kl == k,
-                                    onSelected: (_) => setState(() {
-                                      _kl = k;
-                                      _applyKlUnterDSchaden();
-                                    }),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Schritt 3: Schäden & Abteilung
-                  Step(
-                    title: const Text('3. Schäden & Abteilung'),
-                    isActive: _currentStep >= 2,
-                    state: _currentStep > 2 ? StepState.complete : StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        Text('Schadstellen', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _schaedenList.map((name) {
-                            final sel = _schaeden.contains(name);
-                            final isKlUnterD = name == _klUnterDSchaden && _klUnterD;
-                            return FilterChip(
-                              label: Text(name),
-                              selected: sel,
-                              onSelected: (_keinBefund || isKlUnterD)
-                                  ? null
-                                  : (v) {
-                                      setState(() {
-                                        if (name == 'Keine Rückenfreiheit') {
-                                          if (v) {
-                                            _schaeden.add(name);
-                                          } else {
-                                            _schaeden.remove(name);
-                                            _massSteigeisen1Ctrl.clear();
-                                            _rf1Ctrl.clear();
-                                            _massSteigeisen2Ctrl.clear();
-                                            _rf2Ctrl.clear();
-                                            _massAusgleichCtrl.clear();
-                                            _massKonusAnfCtrl.clear();
-                                            _massKonusEndCtrl.clear();
-                                            _massBermeCtrl.clear();
-                                            _massSolltiefeCtrl.clear();
-                                          }
-                                        } else {
-                                          if (v) {
-                                            _schaeden.add(name);
-                                          } else {
-                                            _schaeden.remove(name);
-                                          }
-                                        }
-                                      });
-                                    },
-                            );
-                          }).toList(),
-                        ),
-                        if (_schaeden.contains('1. Steigeisen entfernen') &&
-                            _schaeden.contains('Leiter einbauen')) ...[
-                          const SizedBox(height: 8),
-                          const Text('Leiter einbau möglich'),
-                        ],
-                        const SizedBox(height: 12),
-                        FilterChip(
-                          label: const Text('🔍 Kein Befund'),
-                          selected: _keinBefund,
-                          onSelected: (v) {
-                            if (v && _klUnterD) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('KL unter D gilt als Schaden – "Kein Befund" nicht möglich.')),
-                              );
-                              return;
-                            }
-                            setState(() {
-                              _keinBefund = v;
-                              if (v) _schaeden.clear();
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Abteilung', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            ElevatedButton(
-                              onPressed: _toggle312,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _show312 ? Colors.blue : null,
-                              ),
-                              child: const Text('312'),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: _toggle313,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _show313 ? Colors.blue : null,
-                              ),
-                              child: const Text('313'),
-                            ),
-                          ],
-                        ),
-                        if (_show312)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Wrap(
-                              spacing: 8,
-                              children: [
-                                FilterChip(
-                                  label: const Text('312 IZ AR'),
-                                  selected: _abteilungen.contains('312 IZ AR'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 IZ AR') : _abteilungen.remove('312 IZ AR');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('312 Ost'),
-                                  selected: _abteilungen.contains('312 Ost'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 Ost') : _abteilungen.remove('312 Ost');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('312 Service'),
-                                  selected: _abteilungen.contains('312 Service'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 Service') : _abteilungen.remove('312 Service');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('312 West'),
-                                  selected: _abteilungen.contains('312 West'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 West') : _abteilungen.remove('312 West');
-                                  }),
-                                ),
-                              ],
-                            ),
-                          ),
-                        if (_show313)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Wrap(
-                              spacing: 8,
-                              children: [
-                                FilterChip(
-                                  label: const Text('313 TU'),
-                                  selected: _abteilungen.contains('313 TU'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('313 TU') : _abteilungen.remove('313 TU');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('313 BU'),
-                                  selected: _abteilungen.contains('313 BU'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('313 BU') : _abteilungen.remove('313 BU');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('313 BauKo'),
-                                  selected: _abteilungen.contains('313 BauKo'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('313 BauKo') : _abteilungen.remove('313 BauKo');
-                                  }),
-                                ),
-                              ],
-                            ),
-                          ),
-                        // ...entfernt: doppelte Abteilungs-Buttons...
-                      ],
-                    ),
-                  ),
-
-                  // Schritt 4: Details
-                  Step(
-                    title: const Text('4. Details'),
-                    isActive: _currentStep >= 3,
-                    state: _currentStep > 3 ? StepState.complete : StepState.indexed,
-                    content: _rfActive
-                        ? ListView(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: [
-                              Text('Objektattribute', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _durchmesserCtrl,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                          decoration: const InputDecoration(
-                            labelText: 'Schacht Durchmesser (cm)',
-                            hintText: 'z. B. 100 cm',
-                            suffixText: 'cm',
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _kanalprofilCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Kanalprofil',
-                            hintText: 'z. B. KR 250, KR 300 oder Freispiegelprofil',
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Örtlichkeit', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        _chipsMulti(
-                          [
-                            'Hauptstraße',
-                            'Nebenstraße',
-                            'Kreuzung',
-                            'Einbahnstraße',
-                            'Geh-/Radweg',
-                            'Spuren',
-                            'Baustellensicherung',
-                          ],
-                          _oertlichkeit,
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _oertlBemCtrl,
-                          maxLines: 2,
-                          decoration: const InputDecoration(
-                            labelText: 'Bemerkung (optional)',
-                            hintText: 'z.B. Besonderheiten der Örtlichkeit',
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Oberflächenart', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        _chipsMulti(
-                          [
-                            'Asphalt',
-                            'teerhaltig',
-                            'Kleinstein',
-                            'Großstein',
-                            'Kupla',
-                            'Sonstige',
-                            'Grünfläche',
-                            'Baum in der Nähe',
-                          ],
-                          _oberflaeche,
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _obflBemCtrl,
-                          maxLines: 2,
-                          decoration: const InputDecoration(
-                            labelText: 'Bemerkung (optional)',
-                            hintText: 'Bei „Baum in der Nähe": Abstand in cm + Stammdurchmesser in cm (z. B. 120 cm / Ø35 cm)',
-                            helperText: 'Foto so aufnehmen, dass Schacht und angrenzender Baum gleichzeitig und eindeutig sichtbar sind (keine Einzelaufnahme).',
-                          ),
-                          validator: (value) {
-                            if (_oberflaeche.contains('Baum in der Nähe') &&
-                                (value == null || value.trim().isEmpty)) {
-                              return 'Bitte Abstand zum Baum und Stammdurchmesser in cm eintragen.';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Schachtkopfdaten', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        _chipsMulti(
-                          [
-                            'Begu DN 625',
-                            'Ausgleichsringe',
-                            'Übergangsplatte (Höhe)',
-                            'Konus DN 625 o. Versatz',
-                            'Konus DN 700 m. Versatz',
-                            'Sonstige Typen',
-                          ],
-                          _schachtkopf,
-                        ),
-                        if (_schachtkopf.contains('Übergangsplatte (Höhe)')) ...[
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _uebergangsplatteBemCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                            decoration: const InputDecoration(
-                              labelText: 'Höhe *',
-                              hintText: 'z. B. 25 oder 30',
-                              suffixText: 'cm',
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Bitte Höhe eintragen.';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                        if (_schachtkopf.contains('Sonstige Typen')) ...[
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _sonstigeTypenBemCtrl,
-                            maxLines: 2,
-                            decoration: const InputDecoration(
-                              labelText: 'Sonstige Typen (Beschreibung) *',
-                              hintText: 'z. B. Besondere Schachtkopf-Ausführung',
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Bitte Beschreibung eintragen.';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                            ],
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              'Nur sichtbar wenn "Keine Rückenfreiheit" ausgewählt ist',
-                              style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic),
-                            ),
-                          ),
-                  ),
-
-                  // Schritt 5: Maße (nur wenn RF aktiv)
-                  Step(
-                    title: const Text('5. Maße'),
-                    isActive: _currentStep >= 4,
-                    state: _currentStep > 4 ? StepState.complete : StepState.indexed,
-                    content: _rfActive
-                        ? ListView(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: [
-                              Text('Messwerte (cm)', style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 12),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('1. Steigeisen', style: Theme.of(context).textTheme.titleSmall),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _massSteigeisen1Ctrl,
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                          decoration: const InputDecoration(
-                                            labelText: 'Steighöhe (cm)',
-                                            hintText: 'z. B. 60 cm',
-                                            suffixText: 'cm',
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _rf1Ctrl,
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                          decoration: const InputDecoration(
-                                            labelText: 'Rückenfreiheit (cm)',
-                                            hintText: 'z. B. 40 cm',
-                                            suffixText: 'cm',
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('2. Steigeisen', style: Theme.of(context).textTheme.titleSmall),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _massSteigeisen2Ctrl,
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                          decoration: const InputDecoration(
-                                            labelText: 'Steighöhe (cm)',
-                                            hintText: 'z. B. 80 cm',
-                                            suffixText: 'cm',
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _rf2Ctrl,
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                          decoration: const InputDecoration(
-                                            labelText: 'Rückenfreiheit (cm)',
-                                            hintText: 'z. B. 60 cm',
-                                            suffixText: 'cm',
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 16,
-                            children: [
-                              SizedBox(
-                                width: 200,
-                                child: TextField(
-                                  controller: _massKonusAnfCtrl,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                  decoration: const InputDecoration(labelText: 'Konusanfang', suffixText: 'cm'),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 200,
-                                child: TextField(
-                                  controller: _massAusgleichCtrl,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                  decoration: const InputDecoration(labelText: '815', suffixText: 'cm'),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 200,
-                                child: TextField(
-                                  controller: _massKonusEndCtrl,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                  decoration: const InputDecoration(labelText: 'Konusende', suffixText: 'cm'),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 200,
-                                child: TextField(
-                                  controller: _massBermeCtrl,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                  decoration: const InputDecoration(labelText: 'Berme', suffixText: 'cm'),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 200,
-                                child: TextField(
-                                  controller: _massSolltiefeCtrl,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                  decoration: const InputDecoration(labelText: 'Solltiefe', suffixText: 'cm'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'Nur sichtbar wenn "Keine Rückenfreiheit" ausgewählt ist',
-                          style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic),
-                        ),
                       ),
+                    ),
                   ),
-
-                  // Schritt 6: Speichern
-                  Step(
-                    title: const Text('6. Speichern'),
-                    isActive: _currentStep >= 5,
-                    state: StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        Text('Bemerkung', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _bemCtrl,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Zusätzliche Bemerkung (optional)',
-                            hintText: 'z. B. besondere Merkmale, Handwerksmängel, ...',
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ObjectGpsPanel(
+                      initialMeta: widget.initialMeta,
+                      captureEnabled: hasNichtImNis(_verfuegbarkeit),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Stepper
+                  Expanded(
+                    child: Stepper(
+                      currentStep: _currentStep,
+                      onStepTapped: (step) =>
+                          setState(() => _currentStep = step),
+                      onStepContinue: () {
+                        if (_currentStep == 0) {
+                          if (!_formKey.currentState!.validate()) return;
+                        }
+                        if (_currentStep < 5) {
+                          setState(() => _currentStep += 1);
+                        } else {
+                          _onSave();
+                        }
+                      },
+                      onStepCancel: () {
+                        if (_currentStep > 0) {
+                          setState(() => _currentStep -= 1);
+                        }
+                      },
+                      controlsBuilder: (context, details) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Row(
+                            children: [
+                              FilledButton(
+                                onPressed: details.onStepContinue,
+                                child: Text(
+                                  _currentStep == 5 ? 'Speichern' : 'Weiter',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: details.onStepCancel,
+                                child: const Text('Zurück'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      steps: [
+                        // Schritt 1: Basis-Daten
+                        Step(
+                          title: const Text('1. Basis-Daten'),
+                          isActive: _currentStep >= 0,
+                          state: _currentStep > 0
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              _label('Positionsnummer *'),
+                              TextFormField(
+                                controller: _posCtrl,
+                                decoration: const InputDecoration(
+                                  hintText: 'z. B. 1, 1a, 2',
+                                  helperText: 'Muss eindeutig sein',
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Bitte Positionsnummer eintragen.';
+                                  }
+                                  return ValidationService.validatePositionField(
+                                    value,
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _idNrCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'ID-Nummer',
+                                  hintText:
+                                      '8-stellig, nur Ziffern (z. B. 12345678)',
+                                  helperText:
+                                      'Optional, Pflicht nur bei "Keine Rückenfreiheit"',
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Verfügbarkeit',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                children: kVerfuegbarkeitOptionsAll
+                                    .map(
+                                      (opt) => FilterChip(
+                                        label: Text(opt),
+                                        selected: _verfuegbarkeit.contains(opt),
+                                        onSelected: (selected) {
+                                          setState(() {
+                                            if (selected) {
+                                              _verfuegbarkeit.add(opt);
+                                            } else {
+                                              _verfuegbarkeit.remove(opt);
+                                              if (opt == 'Ergänzen')
+                                                _verfuegbarkeitErgaenzenCtrl
+                                                    .clear();
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              if (_verfuegbarkeit.contains('Ergänzen')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _verfuegbarkeitErgaenzenCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Ergänzen - Freitext',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              Text(
+                                'Status vor Ort',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                children: kStatusAllgemein
+                                    .map(
+                                      (opt) => FilterChip(
+                                        label: Text(opt),
+                                        selected: _statusVorOrt.contains(opt),
+                                        onSelected: (selected) {
+                                          setState(() {
+                                            if (selected) {
+                                              _statusVorOrt.add(opt);
+                                            } else {
+                                              _statusVorOrt.remove(opt);
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        Text('Medien', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _pickMedia,
-                              icon: const Icon(Icons.image),
-                              label: const Text('Medien'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _pickAudio,
-                              icon: const Icon(Icons.mic),
-                              label: const Text('Audio'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _pickFolder,
-                              icon: const Icon(Icons.folder_open),
-                              label: const Text('PDF'),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.blue.withValues(alpha: 0.1),
+
+                        // Schritt 2: Eingang & Deckelart
+                        Step(
+                          title: const Text('2. Eingang & Deckelart'),
+                          isActive: _currentStep >= 1,
+                          state: _currentStep > 1
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              Text(
+                                'Eingangsart',
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  ChoiceChip(
+                                    label: const Text('Seiteneinstieg'),
+                                    selected: _eingang == 'Seiteneinstieg',
+                                    onSelected: (_) => setState(
+                                      () => _eingang = 'Seiteneinstieg',
+                                    ),
+                                  ),
+                                  ChoiceChip(
+                                    label: const Text('Direkteinstieg'),
+                                    selected: _eingang == 'Direkteinstieg',
+                                    onSelected: (_) => setState(
+                                      () => _eingang = 'Direkteinstieg',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Einsteigart',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  ChoiceChip(
+                                    label: const Text('Leiter'),
+                                    selected: _einsteigart == 'Leiter',
+                                    onSelected: (_) =>
+                                        setState(() => _einsteigart = 'Leiter'),
+                                  ),
+                                  ChoiceChip(
+                                    label: const Text('Steigeisen'),
+                                    selected: _einsteigart == 'Steigeisen',
+                                    onSelected: (_) => setState(
+                                      () => _einsteigart = 'Steigeisen',
+                                    ),
+                                  ),
+                                  ChoiceChip(
+                                    label: const Text('Steigbaum'),
+                                    selected: _einsteigart == 'Steigbaum',
+                                    onSelected: (_) => setState(
+                                      () => _einsteigart = 'Steigbaum',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_einsteigart == 'Steigeisen') ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Steigeisenzustand',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    ChoiceChip(
+                                      label: const Text('Alt'),
+                                      selected: _steigeisenStand == 'Alt',
+                                      onSelected: (_) => setState(
+                                        () => _steigeisenStand = 'Alt',
+                                      ),
+                                    ),
+                                    ChoiceChip(
+                                      label: const Text('Neu'),
+                                      selected: _steigeisenStand == 'Neu',
+                                      onSelected: (_) => setState(
+                                        () => _steigeisenStand = 'Neu',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              if (_einsteigart == 'Steigbaum') ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Fallschutz vorhanden?',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    ChoiceChip(
+                                      label: const Text('Ja'),
+                                      selected: _fallschutzVorhanden,
+                                      onSelected: (_) => setState(
+                                        () => _fallschutzVorhanden = true,
+                                      ),
+                                    ),
+                                    ChoiceChip(
+                                      label: const Text('Nein'),
+                                      selected: !_fallschutzVorhanden,
+                                      onSelected: (_) => setState(
+                                        () => _fallschutzVorhanden = false,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 20),
+                              Text(
+                                'Deckelart',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              DropdownButtonFormField<String>(
+                                initialValue: _deckel,
+                                items: _deckelOpts
+                                    .map(
+                                      (d) => DropdownMenuItem(
+                                        value: d,
+                                        child: Text(
+                                          d == 'Bemerkung'
+                                              ? 'Bemerkung (andere Hersteller)'
+                                              : d,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (v) => setState(() {
+                                  _deckel = v ?? kStandardSchachtDeckelart;
+                                  if (_deckel == kStandardSchachtDeckelart) {
+                                    _schachtkopf.add(kStandardSchachtDeckelart);
+                                  } else {
+                                    _schachtkopf.remove(
+                                      kStandardSchachtDeckelart,
+                                    );
+                                  }
+                                  _applyKlUnterDSchaden();
+                                }),
+                              ),
+                              if (_deckel == 'Bemerkung') ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _deckelBemCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Hersteller/Typ',
+                                  ),
+                                ),
+                              ],
+                              if (_needsSchachtkopfMassChoice) ...[
+                                const SizedBox(height: 8),
+                                DropdownButtonFormField<String>(
+                                  initialValue: _massSchachtkopf,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Maß Schachtkopf',
+                                    helperText:
+                                        'Wird in der Skizze in cm eingetragen.',
+                                    suffixText: 'cm',
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: '62,5',
+                                      child: Text('62,5 cm'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: '80',
+                                      child: Text('80 cm'),
+                                    ),
+                                  ],
+                                  onChanged: (value) => setState(
+                                    () => _massSchachtkopf =
+                                        _normalizeSchachtkopfMass(value),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 20),
+                              // KL-Klasse: nur wenn Deckel NICHT Mannloch ist
+                              if (_deckel != 'Mannloch') ...[
+                                Text(
+                                  'KL-Klasse',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  children: ['A', 'B', 'C', 'D', 'E', 'F']
+                                      .map(
+                                        (k) => ChoiceChip(
+                                          label: Text('KL $k'),
+                                          selected: _kl == k,
+                                          onSelected: (_) => setState(() {
+                                            _kl = k;
+                                            _applyKlUnterDSchaden();
+                                          }),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Chip(
-                          label: Text('📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}'),
+
+                        // Schritt 3: Schäden & Abteilung
+                        Step(
+                          title: const Text('3. Schäden & Abteilung'),
+                          isActive: _currentStep >= 2,
+                          state: _currentStep > 2
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              Text(
+                                'Schadstellen',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _schaedenList.map((name) {
+                                  final sel = _schaeden.contains(name);
+                                  final isKlUnterD =
+                                      name == _klUnterDSchaden && _klUnterD;
+                                  return FilterChip(
+                                    label: Text(name),
+                                    selected: sel,
+                                    onSelected: (_keinBefund || isKlUnterD)
+                                        ? null
+                                        : (v) {
+                                            setState(() {
+                                              if (name ==
+                                                  'Keine Rückenfreiheit') {
+                                                if (v) {
+                                                  _schaeden.add(name);
+                                                } else {
+                                                  _schaeden.remove(name);
+                                                  _massSteigeisen1Ctrl.clear();
+                                                  _rf1Ctrl.clear();
+                                                  _massSteigeisen2Ctrl.clear();
+                                                  _rf2Ctrl.clear();
+                                                  _massAusgleichCtrl.clear();
+                                                  _massKonusAnfCtrl.clear();
+                                                  _massKonusEndCtrl.clear();
+                                                  _massBermeCtrl.clear();
+                                                  _massSolltiefeCtrl.clear();
+                                                }
+                                              } else {
+                                                if (v) {
+                                                  _schaeden.add(name);
+                                                } else {
+                                                  _schaeden.remove(name);
+                                                }
+                                              }
+                                            });
+                                          },
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 12),
+                              FilterChip(
+                                label: const Text('🔍 Kein Befund'),
+                                selected: _keinBefund,
+                                onSelected: (v) {
+                                  if (v && _klUnterD) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'KL unter D gilt als Schaden – "Kein Befund" nicht möglich.',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  setState(() {
+                                    _keinBefund = v;
+                                    if (v) _schaeden.clear();
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Abteilung',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: _toggle312,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _show312
+                                          ? Colors.blue
+                                          : null,
+                                    ),
+                                    child: const Text('312'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: _toggle313,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _show313
+                                          ? Colors.blue
+                                          : null,
+                                    ),
+                                    child: const Text('313'),
+                                  ),
+                                ],
+                              ),
+                              if (_show312)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      FilterChip(
+                                        label: const Text('312 IZ AR'),
+                                        selected: _abteilungen.contains(
+                                          '312 IZ AR',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 IZ AR')
+                                              : _abteilungen.remove(
+                                                  '312 IZ AR',
+                                                );
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('312 Ost'),
+                                        selected: _abteilungen.contains(
+                                          '312 Ost',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 Ost')
+                                              : _abteilungen.remove('312 Ost');
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('312 Service'),
+                                        selected: _abteilungen.contains(
+                                          '312 Service',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 Service')
+                                              : _abteilungen.remove(
+                                                  '312 Service',
+                                                );
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('312 West'),
+                                        selected: _abteilungen.contains(
+                                          '312 West',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 West')
+                                              : _abteilungen.remove('312 West');
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (_show313)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      FilterChip(
+                                        label: const Text('313 TU'),
+                                        selected: _abteilungen.contains(
+                                          '313 TU',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('313 TU')
+                                              : _abteilungen.remove('313 TU');
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('313 BU'),
+                                        selected: _abteilungen.contains(
+                                          '313 BU',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('313 BU')
+                                              : _abteilungen.remove('313 BU');
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('313 BauKo'),
+                                        selected: _abteilungen.contains(
+                                          '313 BauKo',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('313 BauKo')
+                                              : _abteilungen.remove(
+                                                  '313 BauKo',
+                                                );
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              // ...entfernt: doppelte Abteilungs-Buttons...
+                            ],
+                          ),
+                        ),
+
+                        // Schritt 4: Details
+                        Step(
+                          title: const Text('4. Details'),
+                          isActive: _currentStep >= 3,
+                          state: _currentStep > 3
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: _rfActive
+                              ? ListView(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  children: [
+                                    Text(
+                                      'Objektattribute',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      controller: _durchmesserCtrl,
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'[0-9.,]'),
+                                        ),
+                                      ],
+                                      decoration: const InputDecoration(
+                                        labelText: 'Schacht Durchmesser (cm)',
+                                        hintText: '100 oder 120',
+                                        helperText:
+                                            'Standardwerte: 100 cm oder 120 cm',
+                                        suffixText: 'cm',
+                                      ),
+                                      validator: ValidationService
+                                          .validateSchachtdurchmesserCm,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: _kanalprofilCtrl,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Kanalprofil',
+                                        hintText:
+                                            'z. B. KR 250, KR 300 oder Freispiegelprofil',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      'Örtlichkeit',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _chipsMulti([
+                                      'Hauptstraße',
+                                      'Nebenstraße',
+                                      'Kreuzung',
+                                      'Einbahnstraße',
+                                      'Geh-/Radweg',
+                                      'Spuren',
+                                      'Baustellensicherung',
+                                    ], _oertlichkeit),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      controller: _oertlBemCtrl,
+                                      maxLines: 2,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Bemerkung (optional)',
+                                        hintText:
+                                            'z.B. Besonderheiten der Örtlichkeit',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      'Oberflächenart',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _chipsMulti([
+                                      'Asphalt',
+                                      'teerhaltig',
+                                      'Kleinstein',
+                                      'Großstein',
+                                      'Kupla',
+                                      'Sonstige',
+                                      'Grünfläche',
+                                      'Baum in der Nähe',
+                                    ], _oberflaeche),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      controller: _obflBemCtrl,
+                                      maxLines: 2,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Bemerkung (optional)',
+                                        hintText:
+                                            'Bei „Baum in der Nähe": Abstand in cm + Stammdurchmesser in cm (z. B. 120 cm / Ø35 cm)',
+                                        helperText:
+                                            'Foto so aufnehmen, dass Schacht und angrenzender Baum gleichzeitig und eindeutig sichtbar sind (keine Einzelaufnahme).',
+                                      ),
+                                      validator: (value) {
+                                        if (_oberflaeche.contains(
+                                              'Baum in der Nähe',
+                                            ) &&
+                                            (value == null ||
+                                                value.trim().isEmpty)) {
+                                          return 'Bitte Abstand zum Baum und Stammdurchmesser in cm eintragen.';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      'Schachtkopfdaten',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _chipsMulti([
+                                      'Begu DN 625',
+                                      'Ausgleichsringe',
+                                      'Übergangsplatte (Höhe)',
+                                      'Konus DN 625 o. Versatz',
+                                      'Konus DN 700 m. Versatz',
+                                      'Sonstige Typen',
+                                    ], _schachtkopf),
+                                    if (_schachtkopf.contains(
+                                      'Übergangsplatte (Höhe)',
+                                    )) ...[
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: _uebergangsplatteBemCtrl,
+                                        keyboardType: TextInputType.number,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.allow(
+                                            RegExp(r'[0-9.,]'),
+                                          ),
+                                        ],
+                                        decoration: const InputDecoration(
+                                          labelText: 'Höhe *',
+                                          hintText: 'z. B. 25 oder 30',
+                                          suffixText: 'cm',
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return 'Bitte Höhe eintragen.';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ],
+                                    if (_schachtkopf.contains(
+                                      'Sonstige Typen',
+                                    )) ...[
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: _sonstigeTypenBemCtrl,
+                                        maxLines: 2,
+                                        decoration: const InputDecoration(
+                                          labelText:
+                                              'Sonstige Typen (Beschreibung) *',
+                                          hintText:
+                                              'z. B. Besondere Schachtkopf-Ausführung',
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return 'Bitte Beschreibung eintragen.';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ],
+                                  ],
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Text(
+                                    'Nur sichtbar wenn "Keine Rückenfreiheit" ausgewählt ist',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                        ),
+
+                        // Schritt 5: Maße (nur wenn RF aktiv)
+                        Step(
+                          title: const Text('5. Maße'),
+                          isActive: _currentStep >= 4,
+                          state: _currentStep > 4
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: _rfActive
+                              ? ListView(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  children: [
+                                    Text(
+                                      'Messwerte (cm)',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Card(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '1. Steigeisen',
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.titleSmall,
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: TextField(
+                                                    controller:
+                                                        _massSteigeisen1Ctrl,
+                                                    keyboardType:
+                                                        TextInputType.number,
+                                                    inputFormatters: [
+                                                      FilteringTextInputFormatter
+                                                          .digitsOnly,
+                                                    ],
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          labelText:
+                                                              'Steighöhe (cm)',
+                                                          hintText:
+                                                              'z. B. 60 cm',
+                                                          suffixText: 'cm',
+                                                        ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: TextField(
+                                                    controller: _rf1Ctrl,
+                                                    keyboardType:
+                                                        TextInputType.number,
+                                                    inputFormatters: [
+                                                      FilteringTextInputFormatter
+                                                          .digitsOnly,
+                                                    ],
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          labelText:
+                                                              'Rückenfreiheit (cm)',
+                                                          hintText:
+                                                              'z. B. 40 cm',
+                                                          suffixText: 'cm',
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Card(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '2. Steigeisen',
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.titleSmall,
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: TextField(
+                                                    controller:
+                                                        _massSteigeisen2Ctrl,
+                                                    keyboardType:
+                                                        TextInputType.number,
+                                                    inputFormatters: [
+                                                      FilteringTextInputFormatter
+                                                          .digitsOnly,
+                                                    ],
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          labelText:
+                                                              'Steighöhe (cm)',
+                                                          hintText:
+                                                              'z. B. 80 cm',
+                                                          suffixText: 'cm',
+                                                        ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: TextField(
+                                                    controller: _rf2Ctrl,
+                                                    keyboardType:
+                                                        TextInputType.number,
+                                                    inputFormatters: [
+                                                      FilteringTextInputFormatter
+                                                          .digitsOnly,
+                                                    ],
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          labelText:
+                                                              'Rückenfreiheit (cm)',
+                                                          hintText:
+                                                              'z. B. 60 cm',
+                                                          suffixText: 'cm',
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 16,
+                                      runSpacing: 16,
+                                      children: [
+                                        SizedBox(
+                                          width: 200,
+                                          child: TextField(
+                                            controller: _massKonusAnfCtrl,
+                                            keyboardType: TextInputType.number,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                            ],
+                                            decoration: const InputDecoration(
+                                              labelText: 'Konusanfang',
+                                              suffixText: 'cm',
+                                            ),
+                                          ),
+                                        ),
+
+                                        SizedBox(
+                                          width: 200,
+                                          child: TextField(
+                                            controller: _massKonusEndCtrl,
+                                            keyboardType: TextInputType.number,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                            ],
+                                            decoration: const InputDecoration(
+                                              labelText: 'Konusende',
+                                              suffixText: 'cm',
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 200,
+                                          child: TextField(
+                                            controller: _massBermeCtrl,
+                                            keyboardType: TextInputType.number,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                            ],
+                                            decoration: const InputDecoration(
+                                              labelText: 'Berme',
+                                              suffixText: 'cm',
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 200,
+                                          child: TextField(
+                                            controller: _massSolltiefeCtrl,
+                                            keyboardType: TextInputType.number,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                            ],
+                                            decoration: const InputDecoration(
+                                              labelText: 'Solltiefe',
+                                              suffixText: 'cm',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Text(
+                                    'Nur sichtbar wenn "Keine Rückenfreiheit" ausgewählt ist',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                        ),
+
+                        // Schritt 6: Speichern
+                        Step(
+                          title: const Text('6. Speichern'),
+                          isActive: _currentStep >= 5,
+                          state: StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              Text(
+                                'Bemerkung',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _bemCtrl,
+                                maxLines: 3,
+                                decoration: const InputDecoration(
+                                  labelText: 'Zusätzliche Bemerkung (optional)',
+                                  hintText:
+                                      'z. B. besondere Merkmale, Handwerksmängel, ...',
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Medien',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: _pickMedia,
+                                    icon: const Icon(Icons.image),
+                                    label: const Text('Medien'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _pickAudio,
+                                    icon: const Icon(Icons.mic),
+                                    label: const Text('Audio'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _pickFolder,
+                                    icon: const Icon(Icons.folder_open),
+                                    label: const Text('PDF'),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: Colors.blue.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Chip(
+                                label: Text(
+                                  '📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -1644,21 +2012,20 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
 
   // ----------------------------- UI helpers -----------------------------
   Widget _chipsMulti(List<String> items, Set<String> target) => Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: items
-            .map(
-              (name) => FilterChip(
-                label: Text(name),
-                selected: target.contains(name),
-                onSelected: (v) => setState(() {
-                  v ? target.add(name) : target.remove(name);
-                }),
-              ),
-            )
-            .toList(),
-      );
-
+    spacing: 8,
+    runSpacing: 8,
+    children: items
+        .map(
+          (name) => FilterChip(
+            label: Text(name),
+            selected: target.contains(name),
+            onSelected: (v) => setState(() {
+              v ? target.add(name) : target.remove(name);
+            }),
+          ),
+        )
+        .toList(),
+  );
 
   Widget _label(String t) => FieldLabel(t);
 

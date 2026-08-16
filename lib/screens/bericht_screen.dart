@@ -21,6 +21,7 @@ import 'lueftung_screen.dart';
 import 'schieber_screen.dart';
 import 'sonstiges_screen.dart';
 import 'kanal_screen.dart';
+import '../routes.dart';
 
 // ================== ZENTRALE HILFSFUNKTIONEN ==================
 
@@ -91,16 +92,11 @@ List<String> getAllSchaedenFromMetas(List<Map<String, dynamic>> metas) {
   return set.toList()..sort();
 }
 
-List<String> _augmentEsSchaeden(List<dynamic> schaeden) {
-  final list = schaeden
+List<String> _cleanSchaeden(List<dynamic> schaeden) {
+  return schaeden
       .map((e) => e.toString())
       .where((e) => e.trim().isNotEmpty)
       .toList();
-  if (list.contains('1. Steigeisen entfernen') &&
-      list.contains('Leiter einbauen')) {
-    list.add('Leiter einbau möglich');
-  }
-  return list;
 }
 
 List<String> getAllAbteilungenFromMetas(List<Map<String, dynamic>> metas) {
@@ -188,16 +184,6 @@ class BerichtScreen extends StatefulWidget {
 }
 
 class _BerichtScreenState extends State<BerichtScreen> {
-  static const List<String> _objektTypen = <String>[
-    'ES',
-    'VS',
-    'SSK',
-    'LÜ',
-    'SK',
-    'KANAL',
-    'DIV',
-  ];
-
   final _df = DateFormat('dd.MM.yyyy HH:mm');
   final _evCtrl = TextEditingController();
 
@@ -216,6 +202,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
   String _filterModul = 'Alle';
   String _filterAbteilung = 'Alle';
   bool _nurSchadenFilter = false;
+  String? _openingEditorKey;
 
   @override
   void initState() {
@@ -246,6 +233,8 @@ class _BerichtScreenState extends State<BerichtScreen> {
     }
     if (_evCtrl.text.trim().isNotEmpty) {
       await _laden();
+    } else if (mounted) {
+      setState(() => _items = const []);
     }
     await _loadExports();
   }
@@ -273,6 +262,11 @@ class _BerichtScreenState extends State<BerichtScreen> {
         SnackBar(content: Text('Datei konnte nicht geoeffnet werden: $e')),
       );
     }
+  }
+
+  bool _isImportantExportFile(ExportFile file) {
+    final name = file.fileName.toLowerCase();
+    return file.mimeType.contains('pdf') || name.endsWith('.pdf');
   }
 
   Future<void> _deleteExport(ExportFile file) async {
@@ -336,6 +330,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
 
       final metas = await SpeicherService.ladeEintraegeFuerEvNr(ev);
       final s = await SessionStore.load();
+      final nis = await SessionStore.loadNisPlanForEvnr(ev);
 
       final fotosPerEntry = metas
           .map(
@@ -382,13 +377,11 @@ class _BerichtScreenState extends State<BerichtScreen> {
         erfasser: resolvedErfasser,
         wetter: s?.wetter,
         zeit: s?.zeit,
-        nisPlanPdfBase64: s?.nisPlanPdf,
+        nisPlanPdfBase64: nis?.pdfBase64 ?? s?.nisPlanPdf,
       );
 
-      final fileName = _cleanName(
-        'erfassung_${resolvedStrasse ?? 'Unbekannt'}_$ev',
-      );
-      downloadBytesWeb(zipBytes, '$fileName.zip');
+      final fileName =
+          '${_cleanName(ev)}_${_cleanName(resolvedStrasse ?? 'Unbekannt')}';
       final savedPath = await _saveExportOnDevice(
         bytes: zipBytes,
         fileName: '$fileName.zip',
@@ -407,10 +400,10 @@ class _BerichtScreenState extends State<BerichtScreen> {
           SnackBar(
             content: Text(
               savedPath == null
-                  ? '✓ Daten exportiert: $fileName.zip'
+                  ? '✓ Kompletter Ordner exportiert: $fileName.zip'
                   : (savedFiles > 0
                         ? '✓ Export + Ordnerstruktur gespeichert ($savedFiles Dateien)'
-                        : '✓ Export gespeichert: $savedPath'),
+                        : '✓ Kompletter Ordner gespeichert: $savedPath'),
             ),
           ),
         );
@@ -565,6 +558,18 @@ class _BerichtScreenState extends State<BerichtScreen> {
     return (m['typ']?.toString() ?? '') == _filterModul;
   }
 
+  String _typCodeLabel(String typ) {
+    final upper = typ.trim().toUpperCase();
+    if (upper == 'VS' ||
+        upper == 'VG' ||
+        upper == 'G' ||
+        upper.contains('SICKERGRUBE') ||
+        upper.contains('GRUBE')) {
+      return 'VG';
+    }
+    return typ;
+  }
+
   bool _matchAbteilung(Map<String, dynamic> m) {
     if (_filterAbteilung == 'Alle') return true;
     final a = getAbteilungen(m);
@@ -610,131 +615,291 @@ class _BerichtScreenState extends State<BerichtScreen> {
 
   // ========== Edit-Handler ==========
   Future<void> _editEntry(Map<String, dynamic> meta) async {
-    final currentTyp = meta['typ']?.toString() ?? 'DIV';
-    final posNr = (meta['posNr']?.toString() ?? '?').trim();
+    final openingKey = (meta['storageKey'] ?? meta['posNr'] ?? '').toString();
+    if (_openingEditorKey != null) return;
 
-    final selectedTyp = await showDialog<String>(
+    try {
+      final editMeta = _normalizeEditMeta(meta);
+      final currentTyp = _canonicalEditTyp(editMeta['typ']);
+      final typ = await _selectEditModule(
+        currentTyp: currentTyp,
+        posNr: (editMeta['posNr'] ?? '').toString(),
+      );
+      if (typ == null || !mounted) return;
+
+      setState(() => _openingEditorKey = openingKey);
+      final storageKey = (editMeta['storageKey'] ?? '').toString().trim();
+      editMeta['typ'] = typ;
+
+      await _activateEntrySession(editMeta);
+      if (!mounted) return;
+
+      final screen = _editorForMeta(
+        editMeta,
+        typ: typ,
+        storageKey: storageKey.isEmpty ? null : storageKey,
+      );
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          settings: RouteSettings(name: _editorRouteName(typ)),
+          builder: (_) => screen,
+        ),
+      );
+      if (!mounted) return;
+      await _laden();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bearbeiten konnte nicht geöffnet werden: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _openingEditorKey = null);
+    }
+  }
+
+  Future<String?> _selectEditModule({
+    required String currentTyp,
+    required String posNr,
+  }) {
+    const modules = <(String, String, IconData)>[
+      ('ES', 'Einstiegschacht', Icons.vertical_align_bottom),
+      ('VG', 'Sickergrube / Versitzgrube', Icons.water_drop_outlined),
+      ('SSK', 'Straßensinkkasten', Icons.grid_view_outlined),
+      ('LÜ', 'Lüftung', Icons.air),
+      ('SK', 'Schieberkappe', Icons.settings_outlined),
+      ('KANAL', 'Kanal', Icons.account_tree_outlined),
+      ('DIV', 'Sonstiges', Icons.category_outlined),
+    ];
+
+    return showDialog<String>(
       context: context,
-      builder: (ctx) {
-        var tmpTyp = _objektTypen.contains(currentTyp) ? currentTyp : 'DIV';
-
-        return StatefulBuilder(
-          builder: (context, setStateDialog) => AlertDialog(
-            title: const Text('Bearbeiten bestätigen'),
-            content: Column(
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Modul zum Bearbeiten auswählen'),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Soll Position $posNr wirklich bearbeitet werden?'),
-                const SizedBox(height: 12),
-                const Text('Objekttyp (falls falsch verknüpft):'),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: tmpTyp,
-                  items: _objektTypen
-                      .map(
-                        (t) =>
-                            DropdownMenuItem<String>(value: t, child: Text(t)),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setStateDialog(() => tmpTyp = v);
-                  },
-                ),
-                if (tmpTyp != currentTyp) ...[
+                if (posNr.trim().isNotEmpty) ...[
+                  Text('Position $posNr'),
                   const SizedBox(height: 8),
-                  Text(
-                    'Hinweis: Objekttyp wird von $currentTyp auf $tmpTyp gewechselt.',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Achtung: Beim Typwechsel können Felder anders zugeordnet werden oder nicht mehr passen. Bitte nach dem Öffnen alles prüfen und erneut speichern.',
-                    style: TextStyle(fontSize: 12, color: Colors.deepOrange),
-                  ),
                 ],
+                ...modules.map((module) {
+                  final (code, label, icon) = module;
+                  final selected = code == currentTyp;
+                  return ListTile(
+                    leading: Icon(icon),
+                    title: Text(label),
+                    subtitle: Text(code),
+                    trailing: selected
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : const Icon(Icons.chevron_right),
+                    selected: selected,
+                    onTap: () => Navigator.of(dialogContext).pop(code),
+                  );
+                }),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Abbrechen'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(tmpTyp),
-                child: const Text('Bearbeiten'),
-              ),
-            ],
           ),
-        );
-      },
-    );
-
-    if (selectedTyp == null) return;
-    if (!mounted) return;
-
-    if (selectedTyp != currentTyp) {
-      final confirmTypeChange = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Typwechsel bestätigen'),
-          content: Text(
-            'Position $posNr wird von $currentTyp auf $selectedTyp umgestellt.\n\n'
-            'Bitte bestätigen, dass der Typwechsel bewusst durchgeführt werden soll.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Abbrechen'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange),
-              child: const Text('Typ wechseln'),
-            ),
-          ],
         ),
-      );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Abbrechen'),
+          ),
+        ],
+      ),
+    );
+  }
 
-      if (confirmTypeChange != true) return;
+  Map<String, dynamic> _normalizeEditMeta(Map<String, dynamic> source) {
+    final meta = Map<String, dynamic>.from(source);
+
+    const listKeys = <String>[
+      'verfuegbarkeit',
+      'statusVorOrt',
+      'schaeden',
+      'abteilungen',
+      'abteilungsMarker',
+      'oertlichkeit',
+      'oberflaeche',
+      'schachtkopf',
+      'filtersandEigensch',
+      'mediaFotos',
+      'mediaVideos',
+      'mediaAudios',
+      'mediaPdfs',
+    ];
+    for (final key in listKeys) {
+      final value = meta[key];
+      if (value == null) {
+        meta[key] = <String>[];
+      } else if (value is List) {
+        meta[key] = value
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList();
+      } else {
+        meta[key] = value
+            .toString()
+            .split(',')
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .toList();
+      }
     }
-    if (!mounted) return;
 
-    final editMeta = Map<String, dynamic>.from(meta);
-    editMeta['typ'] = selectedTyp;
+    const stringKeys = <String>[
+      'typ',
+      'evnr',
+      'strasse',
+      'erfasser',
+      'wetter',
+      'temperatur',
+      'zeitIso',
+      'posNr',
+      'idNr',
+      'eingang',
+      'einsteigart',
+      'steigeisenStand',
+      'deckel',
+      'deckelBem',
+      'kl',
+      'durchmesser',
+      'kanalprofil',
+      'oertlBem',
+      'obflBem',
+      'uebergangsBem',
+      'mKonusAnf',
+      'mKonusEnd',
+      'mBerme',
+      'mSolltiefe',
+      'st1Hoehe',
+      'st1Rf',
+      'st2Hoehe',
+      'st2Rf',
+      'grubentyp',
+      'grubenart',
+      'tiefe_cm',
+      'tiefe_m',
+      'wasser_cm',
+      'wasser_m',
+      'teller',
+      'baujahr',
+      'gruppe',
+      'auspraegung',
+      'abdeckung',
+      'art',
+      'typ_detail',
+      'zustand',
+      'titel',
+      'beschreibung',
+      'schadensdetails',
+      'bemerkung',
+      'storageKey',
+    ];
+    for (final key in stringKeys) {
+      final value = meta[key];
+      if (value != null && value is! String) {
+        meta[key] = value.toString();
+      }
+    }
+    return meta;
+  }
 
-    Widget screen;
-    switch (selectedTyp) {
+  String _canonicalEditTyp(dynamic rawTyp) {
+    final upper = (rawTyp ?? '').toString().trim().toUpperCase();
+    if (upper == 'ES' || upper.contains('EINSTIEG')) return 'ES';
+    if (upper == 'VG' ||
+        upper == 'VS' ||
+        upper == 'G' ||
+        upper.contains('SICKERGRUBE') ||
+        upper.contains('GRUBE')) {
+      return 'VG';
+    }
+    if (upper == 'SSK' || upper.contains('SINKKASTEN')) return 'SSK';
+    if (upper == 'L' ||
+        upper == 'LÜ' ||
+        upper == 'LUE' ||
+        upper.contains('LÜFTUNG') ||
+        upper.contains('LUEFTUNG')) {
+      return 'LÜ';
+    }
+    if (upper == 'SK' || upper.contains('SCHIEBER')) return 'SK';
+    if (upper == 'KANAL' || upper.contains('KANAL')) return 'KANAL';
+    return 'DIV';
+  }
+
+  Future<void> _activateEntrySession(Map<String, dynamic> meta) async {
+    final current = await SessionStore.load();
+    final evnr = (meta['evnr'] ?? _evCtrl.text).toString().trim();
+    final strasse = (meta['strasse'] ?? current?.strasse ?? '')
+        .toString()
+        .trim();
+    if (evnr.isEmpty || strasse.isEmpty) {
+      throw StateError('EVNr oder Straße fehlt.');
+    }
+
+    final nisPlan = await SessionStore.loadNisPlanForEvnr(evnr);
+    final session = SessionData(
+      evnr: evnr,
+      strasse: strasse,
+      erfasser: (meta['erfasser'] ?? current?.erfasser ?? '').toString(),
+      wetter: (meta['wetter'] ?? current?.wetter ?? 'klar').toString(),
+      zeitIso:
+          (meta['zeitIso'] ??
+                  current?.zeitIso ??
+                  DateTime.now().toIso8601String())
+              .toString(),
+      temperatur: (meta['temperatur'] ?? current?.temperatur ?? '').toString(),
+      nisPlanPdf: nisPlan?.pdfBase64,
+    );
+    await SessionStore.save(session);
+    _s = session;
+  }
+
+  Widget _editorForMeta(
+    Map<String, dynamic> meta, {
+    required String typ,
+    String? storageKey,
+  }) {
+    switch (typ) {
       case 'ES':
-        screen = EinsteigScreen(initialMeta: editMeta);
-        break;
-      case 'VS':
-        screen = GrubenScreen(initialMeta: editMeta);
-        break;
+        return EinsteigScreen(initialMeta: meta);
+      case 'VG':
+        return GrubenScreen(initialMeta: meta);
       case 'SSK':
-        screen = SinkkastenScreen(existingMeta: editMeta);
-        break;
+        return SinkkastenScreen(existingMeta: meta, storageKey: storageKey);
       case 'LÜ':
-        screen = LueftungScreen(existingMeta: editMeta);
-        break;
+        return LueftungScreen(existingMeta: meta, storageKey: storageKey);
       case 'SK':
-        screen = SchieberScreen(existingMeta: editMeta);
-        break;
+        return SchieberScreen(existingMeta: meta, storageKey: storageKey);
       case 'KANAL':
-        screen = KanalScreen(existingMeta: editMeta);
-        break;
+        return KanalScreen(existingMeta: meta, storageKey: storageKey);
       default:
-        screen = SonstigesScreen(existingMeta: editMeta);
-        break;
+        return SonstigesScreen(existingMeta: meta, storageKey: storageKey);
     }
+  }
 
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-    if (!mounted) return;
-    await _laden();
+  String _editorRouteName(String typ) {
+    switch (typ) {
+      case 'ES':
+        return Routes.es;
+      case 'VG':
+        return Routes.g;
+      case 'SSK':
+        return Routes.ssk;
+      case 'LÜ':
+        return Routes.l;
+      case 'SK':
+        return Routes.sk;
+      case 'KANAL':
+        return Routes.kanal;
+      default:
+        return Routes.div;
+    }
   }
 
   String? _sskSchaedenMitLeitung(Map<String, dynamic> meta) {
@@ -891,14 +1056,13 @@ class _BerichtScreenState extends State<BerichtScreen> {
             _firstMetaValue(meta, ['mKonusAnf', 'konusanfang']),
           ),
           buildMetaSection(
-            '815 (cm)',
-            _firstMetaValue(meta, ['mAusgleich', 'mass_815']),
-          ),
-          buildMetaSection(
             'Konusende (cm)',
             _firstMetaValue(meta, ['mKonusEnd', 'konusende']),
           ),
-          buildMetaSection('Berme (cm)', _firstMetaValue(meta, ['mBerme', 'berme'])),
+          buildMetaSection(
+            'Berme (cm)',
+            _firstMetaValue(meta, ['mBerme', 'berme']),
+          ),
           buildMetaSection(
             'Solltiefe (cm)',
             _firstMetaValue(meta, ['mSolltiefe', 'solltiefe']),
@@ -934,6 +1098,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
 
       final usedTypeKeys = <String>{};
       switch (typ) {
+        case 'VG':
         case 'VS':
           addBlock(
             'Technische Daten',
@@ -1013,10 +1178,17 @@ class _BerichtScreenState extends State<BerichtScreen> {
                 'Art',
                 _firstMetaValue(meta, ['art', 'typ_detail']),
               ),
+              buildMetaSection('Deckelart', meta['deckel']),
               buildMetaSection('KL', meta['kl']),
             ].where((w) => w is! SizedBox).toList(),
           );
-          usedTypeKeys.addAll({'art', 'typ_detail', 'kl'});
+          usedTypeKeys.addAll({
+            'art',
+            'typ_detail',
+            'deckel',
+            'deckelBem',
+            'kl',
+          });
           break;
         case 'SK':
           addBlock(
@@ -1120,6 +1292,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
     switch (typ) {
       case 'ES':
         return 'Einstiegschacht';
+      case 'VG':
       case 'VS':
         return 'Sickergrube';
       case 'SSK':
@@ -1137,6 +1310,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
 
   Set<String> _allowedExtraKeysForType(String typ) {
     switch (typ) {
+      case 'VG':
       case 'VS':
         return {'deckelBem'};
       case 'SSK':
@@ -1177,7 +1351,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
       return _sskSchaedenMitLeitung(meta) ?? raw;
     }
     if (typ == 'ES') {
-      return _augmentEsSchaeden(raw);
+      return _cleanSchaeden(raw);
     }
     return raw;
   }
@@ -1210,6 +1384,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
           }
         }
         break;
+      case 'VG':
       case 'VS':
         addPart(_firstMetaValue(meta, ['grubentyp', 'grubenart']));
         addPart(_firstMetaValue(meta, ['deckel', 'deckelart', 'Deckelart']));
@@ -1312,19 +1487,27 @@ class _BerichtScreenState extends State<BerichtScreen> {
   String _mediaSummaryText(Map<String, int> counts) {
     final parts = <String>[];
 
-    void addPart(String label, String key) {
+    void addPart(String singular, String plural, String key) {
       final count = counts[key] ?? 0;
       if (count <= 0) return;
-      parts.add('$label ($count)');
+      parts.add('$count ${count == 1 ? singular : plural}');
     }
 
-    addPart('Fotos', 'fotos');
-    addPart('Videos', 'videos');
-    addPart('Audio', 'audios');
-    addPart('Office-Dateien', 'office');
-    addPart('PDF-Dateien', 'pdf');
+    addPart('Foto', 'Fotos', 'fotos');
+    addPart('Video', 'Videos', 'videos');
+    addPart('Audio-Datei', 'Audio-Dateien', 'audios');
+    addPart('Office-Datei', 'Office-Dateien', 'office');
+    addPart('PDF-Datei', 'PDF-Dateien', 'pdf');
 
     return parts.join(', ');
+  }
+
+  String _remarkWithMedia(String remark, String mediaSummary) {
+    final parts = <String>[
+      if (remark.trim().isNotEmpty && remark.trim() != '—') remark.trim(),
+      if (mediaSummary.isNotEmpty) 'Medien / Dateien: $mediaSummary',
+    ];
+    return parts.isEmpty ? '—' : parts.join(' | ');
   }
 
   String? _detectAttachmentKind(String value, {required String source}) {
@@ -1410,23 +1593,9 @@ class _BerichtScreenState extends State<BerichtScreen> {
                   children: [
                     FilledButton(onPressed: _laden, child: const Text('Laden')),
                     FilledButton.icon(
-                      onPressed: canExport ? _openPreview : null,
-                      icon: const Icon(Icons.visibility),
-                      label: Text(
-                        isMobile ? 'Vorschau' : 'Gesamt PDF Vorschau',
-                      ),
-                    ),
-                    FilledButton.icon(
-                      onPressed: canExport && _items.isNotEmpty
-                          ? _exportDataZip
-                          : null,
-                      icon: const Icon(Icons.download),
-                      label: Text(isMobile ? 'Export ZIP' : 'Daten als ZIP'),
-                    ),
-                    FilledButton.icon(
-                      onPressed: _items.isNotEmpty ? _exportDataCsv : null,
-                      icon: const Icon(Icons.table_view),
-                      label: const Text('CSV'),
+                      onPressed: canExport ? _exportDataZip : null,
+                      icon: const Icon(Icons.folder_zip_outlined),
+                      label: const Text('Kompletter Ordner'),
                     ),
                     if (_items.isNotEmpty)
                       OutlinedButton.icon(
@@ -1509,7 +1678,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Gespeicherte Exporte',
+                        'Gespeicherte PDFs',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Container(
@@ -1547,7 +1716,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
                     const LinearProgressIndicator(minHeight: 2)
                   else if (_exportFiles.isEmpty)
                     const Text(
-                      'Keine Exporte vorhanden.',
+                      'Keine PDF-Exporte vorhanden.',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     )
                   else
@@ -1556,9 +1725,18 @@ class _BerichtScreenState extends State<BerichtScreen> {
                         final filter = _exportFilterCtrl.text
                             .trim()
                             .toLowerCase();
+                        final pdfExports = _exportFiles
+                            .where(_isImportantExportFile)
+                            .toList();
+                        if (pdfExports.isEmpty) {
+                          return const Text(
+                            'Keine PDF-Exporte vorhanden.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          );
+                        }
                         final visible = filter.isEmpty
-                            ? _exportFiles
-                            : _exportFiles.where((file) {
+                            ? pdfExports
+                            : pdfExports.where((file) {
                                 final ev = (file.evnr ?? '').toLowerCase();
                                 final name = file.fileName.toLowerCase();
                                 return name.contains(filter) ||
@@ -1579,16 +1757,11 @@ class _BerichtScreenState extends State<BerichtScreen> {
                                 file.evnr == null || file.evnr!.isEmpty
                                 ? dateText
                                 : 'EVNr ${file.evnr}  •  $dateText';
-                            final isZip =
-                                file.mimeType.contains('zip') ||
-                                file.fileName.toLowerCase().endsWith('.zip');
                             return ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
-                              leading: Icon(
-                                isZip
-                                    ? Icons.archive_outlined
-                                    : Icons.picture_as_pdf_outlined,
+                              leading: const Icon(
+                                Icons.picture_as_pdf_outlined,
                                 size: 18,
                               ),
                               title: Text(
@@ -1691,7 +1864,9 @@ class _BerichtScreenState extends State<BerichtScreen> {
                                                 .map(
                                                   (m) => DropdownMenuItem(
                                                     value: m,
-                                                    child: Text(m),
+                                                    child: Text(
+                                                      _typCodeLabel(m),
+                                                    ),
                                                   ),
                                                 )
                                                 .toList(),
@@ -1817,6 +1992,10 @@ class _BerichtScreenState extends State<BerichtScreen> {
                     final bemerkungKurz = (meta['bemerkung'] as String?)
                         ?.trim();
                     final mediaSummary = _mediaSummaryText(_countMedia(meta));
+                    final bemerkung = _remarkWithMedia(
+                      bemerkungKurz ?? '',
+                      mediaSummary,
+                    );
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -1842,20 +2021,12 @@ class _BerichtScreenState extends State<BerichtScreen> {
                             const SizedBox(height: 8),
 
                             // Kurzansicht in der Berichtoberfläche
-                            buildMetaSection('Aufbau Modul', aufbauModul),
-                            buildMetaSection('Schäden', schaedenKurz),
                             buildMetaSection(
-                              'Bemerkung',
-                              (bemerkungKurz == null || bemerkungKurz.isEmpty)
-                                  ? '—'
-                                  : bemerkungKurz,
+                              'Beschreibung',
+                              aufbauModul.trim().isEmpty ? '—' : aufbauModul,
                             ),
-                            if (mediaSummary.isNotEmpty)
-                              buildMetaSection(
-                                'Medien / Anhänge',
-                                mediaSummary,
-                              ),
-
+                            buildMetaSection('Schäden', schaedenKurz),
+                            buildMetaSection('Bemerkung', bemerkung),
                             const SizedBox(height: 8),
 
                             // Footer: Actions
@@ -1872,9 +2043,24 @@ class _BerichtScreenState extends State<BerichtScreen> {
                                     onPressed: () => _showDetail(meta),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.edit_note),
+                                    icon:
+                                        _openingEditorKey ==
+                                            (meta['storageKey'] ??
+                                                    meta['posNr'] ??
+                                                    '')
+                                                .toString()
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.edit_note),
                                     tooltip: 'Bearbeiten',
-                                    onPressed: () => _editEntry(meta),
+                                    onPressed: _openingEditorKey == null
+                                        ? () => _editEntry(meta)
+                                        : null,
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete),
@@ -1947,7 +2133,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Gespeicherte Exporte',
+                        'Gespeicherte PDFs',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Container(
@@ -1985,7 +2171,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
                     const LinearProgressIndicator(minHeight: 2)
                   else if (_exportFiles.isEmpty)
                     const Text(
-                      'Keine Exporte vorhanden.',
+                      'Keine PDF-Exporte vorhanden.',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     )
                   else
@@ -1994,9 +2180,18 @@ class _BerichtScreenState extends State<BerichtScreen> {
                         final filter = _exportFilterCtrl.text
                             .trim()
                             .toLowerCase();
+                        final pdfExports = _exportFiles
+                            .where(_isImportantExportFile)
+                            .toList();
+                        if (pdfExports.isEmpty) {
+                          return const Text(
+                            'Keine PDF-Exporte vorhanden.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          );
+                        }
                         final visible = filter.isEmpty
-                            ? _exportFiles
-                            : _exportFiles.where((file) {
+                            ? pdfExports
+                            : pdfExports.where((file) {
                                 final ev = (file.evnr ?? '').toLowerCase();
                                 final name = file.fileName.toLowerCase();
                                 return name.contains(filter) ||
@@ -2017,16 +2212,11 @@ class _BerichtScreenState extends State<BerichtScreen> {
                                 file.evnr == null || file.evnr!.isEmpty
                                 ? dateText
                                 : 'EVNr ${file.evnr}  •  $dateText';
-                            final isZip =
-                                file.mimeType.contains('zip') ||
-                                file.fileName.toLowerCase().endsWith('.zip');
                             return ListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
-                              leading: Icon(
-                                isZip
-                                    ? Icons.archive_outlined
-                                    : Icons.picture_as_pdf_outlined,
+                              leading: const Icon(
+                                Icons.picture_as_pdf_outlined,
                                 size: 18,
                               ),
                               title: Text(
@@ -2258,39 +2448,12 @@ class _BerichtScreenState extends State<BerichtScreen> {
           onConfirm: (confirmed) async {
             setState(() => _loading = true);
             try {
-              final zipBytes = await ExportService.buildZipFromPlanMeta(
-                confirmed,
-                metas,
-                erfasser: s?.erfasser,
-                wetter: s?.wetter,
-                zeit: s?.zeit,
-                nisPlanPdfBase64: s?.nisPlanPdf,
-              );
-              final fileName =
-                  '${_cleanName(s?.strasse ?? 'Unbekannt')}_EVNr_$ev.zip';
-              downloadBytesWeb(zipBytes, fileName);
-              final savedPath = await _saveExportOnDevice(
-                bytes: zipBytes,
-                fileName: fileName,
-                evnr: ev,
-              );
-              final savedFiles = await saveZipStructureToDevice(zipBytes);
-              await _trySaveExportHistory(
-                fileName: fileName,
-                mimeType: 'application/zip',
-                bytes: zipBytes,
-                evnr: ev,
-              );
               await _savePdfExportsFromPlan(confirmed, s, ev);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      savedPath == null
-                          ? 'Export erfolgreich (${confirmed.positions.length} Positionen)'
-                          : (savedFiles > 0
-                                ? 'Export + Ordnerstruktur gespeichert ($savedFiles Dateien)'
-                                : 'Export in Downloads gespeichert: $savedPath'),
+                      'PDF-Export erfolgreich (${confirmed.positions.length} Positionen)',
                     ),
                   ),
                 );

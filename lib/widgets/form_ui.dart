@@ -77,7 +77,10 @@ class KvRow extends StatelessWidget {
         children: [
           SizedBox(
             width: labelWidth,
-            child: Text(display, style: const TextStyle(fontWeight: FontWeight.w600)),
+            child: Text(
+              display,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(child: Text(value)),
@@ -87,23 +90,47 @@ class KvRow extends StatelessWidget {
   }
 }
 
+String formatTemperatureValue(String? raw) {
+  final value = (raw ?? '').trim();
+  if (value.isEmpty || value == '—') return '—';
+  if (value.contains('°')) return value;
+  return '$value °C';
+}
+
 class ObjectGpsPanel extends StatefulWidget {
   final Map<String, dynamic>? initialMeta;
+  final bool captureEnabled;
 
-  const ObjectGpsPanel({super.key, this.initialMeta});
+  const ObjectGpsPanel({
+    super.key,
+    this.initialMeta,
+    this.captureEnabled = false,
+  });
 
   @override
   State<ObjectGpsPanel> createState() => _ObjectGpsPanelState();
 }
 
 class _ObjectGpsPanelState extends State<ObjectGpsPanel> {
-  late final Future<Map<String, dynamic>?> _gpsFuture;
-  static const double _warningAccuracyMeters = 20;
+  Future<Map<String, dynamic>?>? _gpsFuture;
+  static const double _warningAccuracyMeters = GpsService.targetAccuracyMeters;
 
   @override
   void initState() {
     super.initState();
-    _gpsFuture = GpsService.getCurrentLocation();
+    if (widget.captureEnabled) {
+      _gpsFuture = GpsService.getCurrentLocation();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ObjectGpsPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.captureEnabled && widget.captureEnabled) {
+      _gpsFuture = GpsService.getCurrentLocation();
+    } else if (oldWidget.captureEnabled && !widget.captureEnabled) {
+      _gpsFuture = null;
+    }
   }
 
   double? _toDouble(dynamic value) {
@@ -124,15 +151,22 @@ class _ObjectGpsPanelState extends State<ObjectGpsPanel> {
     final rawGps = source['gps'];
     if (rawGps is Map) {
       final gpsMap = Map<String, dynamic>.from(rawGps);
-      final lat = _toDouble(gpsMap['lat'] ?? gpsMap['latitude'] ?? gpsMap['gpsLat']);
+      final lat = _toDouble(
+        gpsMap['lat'] ?? gpsMap['latitude'] ?? gpsMap['gpsLat'],
+      );
       final lon = _toDouble(gpsMap['lon'] ?? gpsMap['lng'] ?? gpsMap['gpsLon']);
       if (lat == null || lon == null) return null;
 
       return <String, dynamic>{
         'lat': lat,
         'lon': lon,
-        if (_toNum(gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy']) != null)
-          'accuracy_m': _toNum(gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy']),
+        if (_toNum(
+              gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy'],
+            ) !=
+            null)
+          'accuracy_m': _toNum(
+            gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy'],
+          ),
       };
     }
 
@@ -143,7 +177,8 @@ class _ObjectGpsPanelState extends State<ObjectGpsPanel> {
     return <String, dynamic>{
       'lat': lat,
       'lon': lon,
-      if (_toNum(source['gpsAcc']) != null) 'accuracy_m': _toNum(source['gpsAcc']),
+      if (_toNum(source['gpsAcc']) != null)
+        'accuracy_m': _toNum(source['gpsAcc']),
     };
   }
 
@@ -169,35 +204,52 @@ class _ObjectGpsPanelState extends State<ObjectGpsPanel> {
                   children: [
                     const Icon(Icons.my_location_outlined, size: 18),
                     const SizedBox(width: 8),
-                    Text('GPS-Daten', style: Theme.of(context).textTheme.titleSmall),
+                    Text(
+                      'GPS-Daten',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (snapshot.connectionState == ConnectionState.waiting && !hasCoords)
+                if (!widget.captureEnabled && !hasCoords)
+                  Text(
+                    'GPS wird nur ermittelt, wenn "Nicht im NIS" ausgewählt ist.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  )
+                else if (snapshot.connectionState == ConnectionState.waiting &&
+                    !hasCoords)
                   const Text('GPS wird ermittelt...')
                 else if (hasCoords) ...[
                   KvRow(label: 'Breitengrad', value: lat.toStringAsFixed(6)),
                   KvRow(label: 'Längengrad', value: lon.toStringAsFixed(6)),
-                  if (acc != null) KvRow(label: 'Genauigkeit', value: '${acc.toString()} m'),
+                  if (acc != null)
+                    KvRow(
+                      label: 'Genauigkeit',
+                      value: '${acc.toString()} m (Ziel: max. 5 m)',
+                    ),
                   if (hasAccuracyWarning)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Achtung: Die aktuelle GPS-Genauigkeit ist noch grob. Die Position wird trotzdem gespeichert, aber bitte bei Bedarf vor Ort prüfen.',
+                        'Achtung: Die aktuelle GPS-Genauigkeit liegt noch über 5 m. Die App wartet beim Speichern länger auf einen genaueren Fix und speichert sonst den besten verfügbaren Wert.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.orange[800],
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: Colors.orange[800],
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   const SizedBox(height: 4),
                   Text(
-                    'Wird beim Speichern automatisch am Objekt hinterlegt. Je kleiner der Wert, desto genauer die Position.',
+                    widget.captureEnabled
+                        ? 'Wird beim Speichern automatisch am Objekt hinterlegt. Je kleiner der Wert, desto genauer die Position.'
+                        : 'Gespeicherte GPS-Daten. Neu ermittelt wird nur bei "Nicht im NIS".',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ] else
                   Text(
-                    'Keine GPS-Daten verfügbar. Beim Speichern wird erneut versucht, die Position zu ermitteln.',
+                    widget.captureEnabled
+                        ? 'Keine GPS-Daten verfügbar. Beim Speichern wird erneut versucht, die Position zu ermitteln.'
+                        : 'Keine GPS-Daten nötig. GPS wird nur bei "Nicht im NIS" abgefragt.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
               ],

@@ -28,46 +28,48 @@ class LueftungScreen extends StatefulWidget {
 }
 
 class _LueftungScreenState extends State<LueftungScreen> {
-    // State für 312/313 Buttons
-    bool _show312 = false;
-    bool _show313 = false;
+  // State für 312/313 Buttons
+  bool _show312 = false;
+  bool _show313 = false;
 
-    void _toggle312() {
-      setState(() {
-        _show312 = !_show312;
-        if (_show312) {
-          _show313 = false;
-          _abteilungen.removeWhere((e) => e.startsWith('313'));
-        }
-      });
-    }
-
-    void _toggle313() {
-      setState(() {
-        _show313 = !_show313;
-        if (_show313) {
-          _show312 = false;
-          _abteilungen.removeWhere((e) => e.startsWith('312'));
-        }
-      });
-    }
-
-    void _syncAbteilungsToggles() {
-      final has312 = _abteilungen.any((e) => e.startsWith('312'));
-      final has313 = _abteilungen.any((e) => e.startsWith('313'));
-      if (has312 && !has313) {
-        _show312 = true;
+  void _toggle312() {
+    setState(() {
+      _show312 = !_show312;
+      if (_show312) {
         _show313 = false;
-      } else if (has313 && !has312) {
-        _show313 = true;
-        _show312 = false;
+        _abteilungen.removeWhere((e) => e.startsWith('313'));
       }
+    });
+  }
+
+  void _toggle313() {
+    setState(() {
+      _show313 = !_show313;
+      if (_show313) {
+        _show312 = false;
+        _abteilungen.removeWhere((e) => e.startsWith('312'));
+      }
+    });
+  }
+
+  void _syncAbteilungsToggles() {
+    final has312 = _abteilungen.any((e) => e.startsWith('312'));
+    final has313 = _abteilungen.any((e) => e.startsWith('313'));
+    if (has312 && !has313) {
+      _show312 = true;
+      _show313 = false;
+    } else if (has313 && !has312) {
+      _show313 = true;
+      _show312 = false;
     }
+  }
+
   SessionData? _session;
   final _formKey = GlobalKey<FormState>();
 
   bool get _isEdit {
-    final key = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final key =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     return widget.existingMeta != null && (key ?? '').isNotEmpty;
   }
 
@@ -77,6 +79,8 @@ class _LueftungScreenState extends State<LueftungScreen> {
 
   // Art Alt/Neu
   String _art = 'Alt'; // Alt | Neu
+  String _deckel = kStandardSchachtDeckelart;
+  final _deckelBemCtrl = TextEditingController();
   // KL nur wenn Neu — Standard D, mit Bestätigung beim Speichern
   String _kl = 'D';
 
@@ -105,6 +109,8 @@ class _LueftungScreenState extends State<LueftungScreen> {
   // Display-Reihenfolge (für Bericht)
   final List<String> _displayOrder = [
     'art',
+    'deckel',
+    'deckelBem',
     'kl',
     'verfuegbarkeit',
     'statusVorOrt',
@@ -134,11 +140,18 @@ class _LueftungScreenState extends State<LueftungScreen> {
 
     // typ_detail oder art verwenden
     _art = (m['typ_detail'] as String?) ?? (m['art'] as String?) ?? _art;
+    _deckel = normalizeSchachtDeckelart(m['deckel'], fallback: _deckel);
+    _deckelBemCtrl.text =
+        (m['deckelBem'] as String?) ?? schachtDeckelBemerkung(m['deckel']);
     _kl = (m['kl'] as String?) ?? _kl;
 
     _schaeden
       ..clear()
-      ..addAll(((m['schaeden'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['schaeden'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _keinBefund = (m['keinBefund'] == true);
     _applyKlUnterDSchaden();
 
@@ -156,12 +169,21 @@ class _LueftungScreenState extends State<LueftungScreen> {
 
     _fotos
       ..clear()
-      ..addAll(((m['mediaFotos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaFotos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _videos
       ..clear()
-      ..addAll(((m['mediaVideos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaVideos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _audios.clear();
-    final audios = (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final audios =
+        (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
     _audios.addAll(audios);
     final pdf = m['mediaPdfs'];
     if (pdf is List) _pdfs.addAll(pdf.cast<String>());
@@ -171,7 +193,8 @@ class _LueftungScreenState extends State<LueftungScreen> {
     setState(() {});
   }
 
-  bool get _klUnterD => _art == 'Neu' && (_kl == 'A' || _kl == 'B' || _kl == 'C');
+  bool get _klUnterD =>
+      _art == 'Neu' && (_kl == 'A' || _kl == 'B' || _kl == 'C');
 
   void _applyKlUnterDSchaden() {
     if (_klUnterD) {
@@ -184,7 +207,10 @@ class _LueftungScreenState extends State<LueftungScreen> {
 
   Set<String> _splitSet(dynamic v) {
     if (v is List) {
-      return v.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toSet();
+      return v
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toSet();
     }
     final s = (v ?? '').toString().trim();
     if (s.isEmpty) return {};
@@ -195,6 +221,7 @@ class _LueftungScreenState extends State<LueftungScreen> {
   void dispose() {
     _posCtrl.dispose();
     _idNrCtrl.dispose();
+    _deckelBemCtrl.dispose();
     _bemCtrl.dispose();
     super.dispose();
   }
@@ -244,9 +271,9 @@ class _LueftungScreenState extends State<LueftungScreen> {
         _audios.add(audioData);
         setState(() {});
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Audio hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Audio hinzugefügt')));
         }
       }
     }
@@ -292,10 +319,14 @@ class _LueftungScreenState extends State<LueftungScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: Text(
-                      recognizedText.isEmpty ? 'Erkannter Text wird hier angezeigt' : recognizedText,
+                      recognizedText.isEmpty
+                          ? 'Erkannter Text wird hier angezeigt'
+                          : recognizedText,
                       style: TextStyle(
                         fontSize: 14,
-                        color: recognizedText.isEmpty ? Colors.grey : Colors.black,
+                        color: recognizedText.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
                       ),
                     ),
                   ),
@@ -351,9 +382,9 @@ class _LueftungScreenState extends State<LueftungScreen> {
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Diktat hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Diktat hinzugefügt')));
         }
       }
     });
@@ -375,8 +406,14 @@ class _LueftungScreenState extends State<LueftungScreen> {
             title: Text(title),
             content: Text(msg),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Abbrechen')),
-              FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('OK')),
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Abbrechen'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('OK'),
+              ),
             ],
           ),
         )) ??
@@ -386,7 +423,9 @@ class _LueftungScreenState extends State<LueftungScreen> {
   // ----------------------------- UI -----------------------------
   Future<void> _openNisPlan() async {
     final evnr = _session?.evnr ?? '';
-    final nis = evnr.trim().isNotEmpty ? await SessionStore.loadNisPlanForEvnr(evnr) : null;
+    final nis = evnr.trim().isNotEmpty
+        ? await SessionStore.loadNisPlanForEvnr(evnr)
+        : null;
     if (!mounted) return;
     final base64 = nis?.pdfBase64 ?? _session?.nisPlanPdf;
     if (base64 == null || base64.isEmpty) {
@@ -422,7 +461,7 @@ class _LueftungScreenState extends State<LueftungScreen> {
             '- Bauwerksdaten, Zustand und besondere Merkmale dokumentieren.\n'
             '- Bei Bedarf Medien ergänzen.\n\n'
             'Hinweis:\n'
-            'Die Erfassung wird sofort gespeichert. Exportdateien entstehen erst im Bericht.'
+            'Die Erfassung wird sofort gespeichert. Exportdateien entstehen erst im Bericht.',
           ),
         ),
         actions: [
@@ -443,6 +482,7 @@ class _LueftungScreenState extends State<LueftungScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lüftung (L)'),
+        centerTitle: true,
         actions: [
           TextButton.icon(
             onPressed: _openNisPlan,
@@ -461,7 +501,9 @@ class _LueftungScreenState extends State<LueftungScreen> {
       body: s == null
           ? const Center(
               child: Text(
-                  'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.'))
+                'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+              ),
+            )
           : Form(
               key: _formKey,
               child: Column(
@@ -472,24 +514,39 @@ class _LueftungScreenState extends State<LueftungScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('L – Kopf',
-                                style:
-                                    Theme.of(context).textTheme.titleMedium),
-                            const SizedBox(height: 6),
-                            _kv('EVNr', s.evnr),
-                            _kv('Straße', s.strasse),
-                            _kv('Erfasser:in', s.erfasser),
-                            _kv(
-                                'Datum/Zeit',
-                                df.format(DateTime.tryParse(s.zeitIso) ??
-                                    DateTime.now())),
-                            _kv('Wetter', _wIcon(s.wetter)),
-                          ]),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Erfasser Daten',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          _kv('EVNr', s.evnr),
+                          _kv('Straße', s.strasse),
+                          _kv('Erfasser:in', s.erfasser),
+                          _kv(
+                            'Datum/Zeit',
+                            df.format(
+                              DateTime.tryParse(s.zeitIso) ?? DateTime.now(),
+                            ),
+                          ),
+                          _kv('Wetter', _wIcon(s.wetter)),
+                          _kv(
+                            'Temperatur',
+                            formatTemperatureValue(s.temperatur),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ObjectGpsPanel(
+                      initialMeta: widget.existingMeta,
+                      captureEnabled: hasNichtImNis(_verfuegbarkeit),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   // Stepper
                   Expanded(
                     child: Stepper(
@@ -514,7 +571,8 @@ class _LueftungScreenState extends State<LueftungScreen> {
                           setState(() => _currentStep--);
                         }
                       },
-                      onStepTapped: (step) => setState(() => _currentStep = step),
+                      onStepTapped: (step) =>
+                          setState(() => _currentStep = step),
                       controlsBuilder: (context, details) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 16),
@@ -522,7 +580,9 @@ class _LueftungScreenState extends State<LueftungScreen> {
                             children: [
                               FilledButton(
                                 onPressed: details.onStepContinue,
-                                child: Text(_currentStep == 3 ? 'Speichern' : 'Weiter'),
+                                child: Text(
+                                  _currentStep == 3 ? 'Speichern' : 'Weiter',
+                                ),
                               ),
                               const SizedBox(width: 12),
                               if (_currentStep > 0)
@@ -539,46 +599,64 @@ class _LueftungScreenState extends State<LueftungScreen> {
                         Step(
                           title: const Text('Basisdaten'),
                           isActive: _currentStep >= 0,
-                          state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+                          state: _currentStep > 0
+                              ? StepState.complete
+                              : StepState.indexed,
                           content: ListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
-                              ObjectGpsPanel(initialMeta: widget.existingMeta),
-                              const SizedBox(height: 12),
-
                               // PosNr
                               _label('Positionsnummer *'),
                               TextFormField(
                                 controller: _posCtrl,
-                                decoration:
-                                    const InputDecoration(hintText: 'z. B. 1, 1a, 2'),
-                                validator: ValidationService.validatePositionField,
+                                decoration: const InputDecoration(
+                                  hintText: 'z. B. 1, 1a, 2',
+                                ),
+                                validator:
+                                    ValidationService.validatePositionField,
                               ),
 
                               const SizedBox(height: 12),
-                              TextField(controller: _idNrCtrl, decoration: const InputDecoration(labelText: 'ID-Nummer (optional)')),
+                              _label('ID-Nummer (optional)'),
+                              TextField(
+                                controller: _idNrCtrl,
+                                decoration: const InputDecoration(
+                                  hintText:
+                                      '4-stellig, nur Ziffern (z. B. 1234)',
+                                  helperText: 'Optional',
+                                ),
+                              ),
 
                               const SizedBox(height: 16),
-                              Text('Verfügbarkeit', style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                'Verfügbarkeit',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               const SizedBox(height: 6),
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
-                                children: kVerfuegbarkeitOptionsAll.map((opt) => FilterChip(
-                                      label: Text(opt),
-                                      selected: _verfuegbarkeit.contains(opt),
-                                      onSelected: (v) => setState(() {
-                                        if (v) {
-                                          _verfuegbarkeit.add(opt);
-                                        } else {
-                                          _verfuegbarkeit.remove(opt);
-                                          if (opt == 'Ergänzen') _verfuegbarkeitErgaenzenCtrl.clear();
-                                        }
-                                      }),
-                                    )).toList(),
+                                children: kVerfuegbarkeitOptionsAll
+                                    .map(
+                                      (opt) => FilterChip(
+                                        label: Text(opt),
+                                        selected: _verfuegbarkeit.contains(opt),
+                                        onSelected: (v) => setState(() {
+                                          if (v) {
+                                            _verfuegbarkeit.add(opt);
+                                          } else {
+                                            _verfuegbarkeit.remove(opt);
+                                            if (opt == 'Ergänzen')
+                                              _verfuegbarkeitErgaenzenCtrl
+                                                  .clear();
+                                          }
+                                        }),
+                                      ),
+                                    )
+                                    .toList(),
                               ),
-                              if (_verfuegbarkeit.contains('Ergänzen')) ... [
+                              if (_verfuegbarkeit.contains('Ergänzen')) ...[
                                 const SizedBox(height: 8),
                                 TextField(
                                   controller: _verfuegbarkeitErgaenzenCtrl,
@@ -596,17 +674,21 @@ class _LueftungScreenState extends State<LueftungScreen> {
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
-                                children: kStatusAllgemein.map((opt) => FilterChip(
-                                      label: Text(opt),
-                                      selected: _statusVorOrt.contains(opt),
-                                      onSelected: (v) => setState(() {
-                                        if (v) {
-                                          _statusVorOrt.add(opt);
-                                        } else {
-                                          _statusVorOrt.remove(opt);
-                                        }
-                                      }),
-                                    )).toList(),
+                                children: kStatusAllgemein
+                                    .map(
+                                      (opt) => FilterChip(
+                                        label: Text(opt),
+                                        selected: _statusVorOrt.contains(opt),
+                                        onSelected: (v) => setState(() {
+                                          if (v) {
+                                            _statusVorOrt.add(opt);
+                                          } else {
+                                            _statusVorOrt.remove(opt);
+                                          }
+                                        }),
+                                      ),
+                                    )
+                                    .toList(),
                               ),
                             ],
                           ),
@@ -616,50 +698,105 @@ class _LueftungScreenState extends State<LueftungScreen> {
                         Step(
                           title: const Text('Lüftungsart'),
                           isActive: _currentStep >= 1,
-                          state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+                          state: _currentStep > 1
+                              ? StepState.complete
+                              : StepState.indexed,
                           content: ListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
                               const SizedBox(height: 16),
-                              Text('Art *', style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                'Art *',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               const SizedBox(height: 6),
-                              Wrap(spacing: 8, children: [
-                                ChoiceChip(
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  ChoiceChip(
                                     label: const Text('Alt'),
                                     selected: _art == 'Alt',
                                     onSelected: (_) => setState(() {
-                                          _art = 'Alt';
-                                          _applyKlUnterDSchaden();
-                                        })),
-                                ChoiceChip(
+                                      _art = 'Alt';
+                                      _applyKlUnterDSchaden();
+                                    }),
+                                  ),
+                                  ChoiceChip(
                                     label: const Text('Neu'),
                                     selected: _art == 'Neu',
                                     onSelected: (_) => setState(() {
-                                          _art = 'Neu';
-                                          _applyKlUnterDSchaden();
-                                        })),
-                              ]),
+                                      _art = 'Neu';
+                                      _applyKlUnterDSchaden();
+                                    }),
+                                  ),
+                                ],
+                              ),
 
                               if (_art == 'Neu') ...[
                                 const SizedBox(height: 12),
-                                Text('KL-Klasse (Pflicht)',
-                                    style: Theme.of(context).textTheme.titleMedium),
+                                Text(
+                                  'Deckelart',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String>(
+                                  initialValue: _deckel,
+                                  items: kSchachtDeckelartOptions
+                                      .map(
+                                        (d) => DropdownMenuItem(
+                                          value: d,
+                                          child: Text(
+                                            d == 'Bemerkung'
+                                                ? 'Bemerkung (andere Hersteller)'
+                                                : d,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) => setState(
+                                    () => _deckel =
+                                        v ?? kStandardSchachtDeckelart,
+                                  ),
+                                ),
+                                if (_deckel == 'Bemerkung') ...[
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _deckelBemCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Hersteller/Typ',
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                Text(
+                                  'KL-Klasse (Pflicht)',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
                                 const SizedBox(height: 6),
                                 Wrap(
                                   spacing: 8,
                                   children: ['A', 'B', 'C', 'D', 'E', 'F']
-                                      .map((k) => ChoiceChip(
+                                      .map(
+                                        (k) => ChoiceChip(
                                           label: Text('KL $k'),
                                           selected: _kl == k,
-                                        onSelected: (_) => setState(() {
-                                          _kl = k;
-                                          _applyKlUnterDSchaden();
-                                          })))
+                                          onSelected: (_) => setState(() {
+                                            _kl = k;
+                                            _applyKlUnterDSchaden();
+                                          }),
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text('Standard ist KL D (Bestätigung beim Speichern).'),
+                                const Text(
+                                  'Standard ist KL D (Bestätigung beim Speichern).',
+                                ),
                               ],
                             ],
                           ),
@@ -669,60 +806,85 @@ class _LueftungScreenState extends State<LueftungScreen> {
                         Step(
                           title: const Text('Schäden/Abteilung'),
                           isActive: _currentStep >= 2,
-                          state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+                          state: _currentStep > 2
+                              ? StepState.complete
+                              : StepState.indexed,
                           content: ListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
                               _sectionLabel('Schäden'),
                               const SizedBox(height: 6),
-                              Wrap(spacing: 8, runSpacing: 8, children: [
-                                FilterChip(
-                                  label: const Text('Austausch'),
-                                  selected: _schaeden.contains('Austausch'),
-                                  onSelected: _keinBefund
-                                      ? null
-                                      : (v) => setState(() {
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  FilterChip(
+                                    label: const Text('Austausch'),
+                                    selected: _schaeden.contains('Austausch'),
+                                    onSelected: _keinBefund
+                                        ? null
+                                        : (v) => setState(() {
                                             if (v) {
                                               _schaeden.add('Austausch');
                                             } else {
                                               _schaeden.remove('Austausch');
                                             }
                                           }),
-                                ),
-                                FilterChip(
-                                  label: const Text('Umbau auf BEGU'),
-                                  selected: _schaeden.contains('Umbau auf BEGU'),
-                                  onSelected: _keinBefund
-                                      ? null
-                                      : (v) => setState(() {
+                                  ),
+                                  FilterChip(
+                                    label: const Text('Umbau auf BEGU'),
+                                    selected: _schaeden.contains(
+                                      'Umbau auf BEGU',
+                                    ),
+                                    onSelected: _keinBefund
+                                        ? null
+                                        : (v) => setState(() {
                                             if (v) {
                                               _schaeden.add('Umbau auf BEGU');
                                             } else {
-                                              _schaeden.remove('Umbau auf BEGU');
+                                              _schaeden.remove(
+                                                'Umbau auf BEGU',
+                                              );
                                             }
                                           }),
-                                ),
-                                FilterChip(
-                                  label: const Text(_klUnterDSchaden),
-                                  selected: _schaeden.contains(_klUnterDSchaden),
-                                  onSelected: (_keinBefund || _klUnterD)
-                                      ? null
-                                      : (v) => setState(() {
+                                  ),
+                                  FilterChip(
+                                    label: const Text(_klUnterDSchaden),
+                                    selected: _schaeden.contains(
+                                      _klUnterDSchaden,
+                                    ),
+                                    onSelected: (_keinBefund || _klUnterD)
+                                        ? null
+                                        : (v) => setState(() {
                                             v
-                                                ? _schaeden.add(_klUnterDSchaden)
-                                                : _schaeden.remove(_klUnterDSchaden);
+                                                ? _schaeden.add(
+                                                    _klUnterDSchaden,
+                                                  )
+                                                : _schaeden.remove(
+                                                    _klUnterDSchaden,
+                                                  );
                                           }),
-                                ),
-                              ]),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 8),
                               FilterChip(
-                                label: Text('Kein Befund', style: TextStyle(color: _keinBefund ? Colors.green : null)),
+                                label: Text(
+                                  'Kein Befund',
+                                  style: TextStyle(
+                                    color: _keinBefund ? Colors.green : null,
+                                  ),
+                                ),
                                 selected: _keinBefund,
                                 onSelected: (v) {
                                   if (v && _klUnterD) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('KL unter D gilt als Schaden – "Kein Befund" nicht möglich.')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'KL unter D gilt als Schaden – "Kein Befund" nicht möglich.',
+                                        ),
+                                      ),
                                     );
                                     return;
                                   }
@@ -741,7 +903,9 @@ class _LueftungScreenState extends State<LueftungScreen> {
                                   ElevatedButton(
                                     onPressed: _toggle312,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: _show312 ? Colors.blue : null,
+                                      backgroundColor: _show312
+                                          ? Colors.blue
+                                          : null,
                                     ),
                                     child: const Text('312'),
                                   ),
@@ -749,7 +913,9 @@ class _LueftungScreenState extends State<LueftungScreen> {
                                   ElevatedButton(
                                     onPressed: _toggle313,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: _show313 ? Colors.blue : null,
+                                      backgroundColor: _show313
+                                          ? Colors.blue
+                                          : null,
                                     ),
                                     child: const Text('313'),
                                   ),
@@ -757,36 +923,58 @@ class _LueftungScreenState extends State<LueftungScreen> {
                               ),
                               if (_show312)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   child: Wrap(
                                     spacing: 8,
                                     children: [
                                       FilterChip(
                                         label: const Text('312 IZ AR'),
-                                        selected: _abteilungen.contains('312 IZ AR'),
+                                        selected: _abteilungen.contains(
+                                          '312 IZ AR',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 IZ AR') : _abteilungen.remove('312 IZ AR');
+                                          v
+                                              ? _abteilungen.add('312 IZ AR')
+                                              : _abteilungen.remove(
+                                                  '312 IZ AR',
+                                                );
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('312 Ost'),
-                                        selected: _abteilungen.contains('312 Ost'),
+                                        selected: _abteilungen.contains(
+                                          '312 Ost',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 Ost') : _abteilungen.remove('312 Ost');
+                                          v
+                                              ? _abteilungen.add('312 Ost')
+                                              : _abteilungen.remove('312 Ost');
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('312 Service'),
-                                        selected: _abteilungen.contains('312 Service'),
+                                        selected: _abteilungen.contains(
+                                          '312 Service',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 Service') : _abteilungen.remove('312 Service');
+                                          v
+                                              ? _abteilungen.add('312 Service')
+                                              : _abteilungen.remove(
+                                                  '312 Service',
+                                                );
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('312 West'),
-                                        selected: _abteilungen.contains('312 West'),
+                                        selected: _abteilungen.contains(
+                                          '312 West',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 West') : _abteilungen.remove('312 West');
+                                          v
+                                              ? _abteilungen.add('312 West')
+                                              : _abteilungen.remove('312 West');
                                         }),
                                       ),
                                     ],
@@ -794,29 +982,45 @@ class _LueftungScreenState extends State<LueftungScreen> {
                                 ),
                               if (_show313)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   child: Wrap(
                                     spacing: 8,
                                     children: [
                                       FilterChip(
                                         label: const Text('313 TU'),
-                                        selected: _abteilungen.contains('313 TU'),
+                                        selected: _abteilungen.contains(
+                                          '313 TU',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('313 TU') : _abteilungen.remove('313 TU');
+                                          v
+                                              ? _abteilungen.add('313 TU')
+                                              : _abteilungen.remove('313 TU');
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('313 BU'),
-                                        selected: _abteilungen.contains('313 BU'),
+                                        selected: _abteilungen.contains(
+                                          '313 BU',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('313 BU') : _abteilungen.remove('313 BU');
+                                          v
+                                              ? _abteilungen.add('313 BU')
+                                              : _abteilungen.remove('313 BU');
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('313 BauKo'),
-                                        selected: _abteilungen.contains('313 BauKo'),
+                                        selected: _abteilungen.contains(
+                                          '313 BauKo',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('313 BauKo') : _abteilungen.remove('313 BauKo');
+                                          v
+                                              ? _abteilungen.add('313 BauKo')
+                                              : _abteilungen.remove(
+                                                  '313 BauKo',
+                                                );
                                         }),
                                       ),
                                     ],
@@ -831,17 +1035,19 @@ class _LueftungScreenState extends State<LueftungScreen> {
                         Step(
                           title: const Text('Speichern'),
                           isActive: _currentStep >= 3,
-                          state: _currentStep == 3 ? StepState.indexed : StepState.indexed,
+                          state: _currentStep == 3
+                              ? StepState.indexed
+                              : StepState.indexed,
                           content: ListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
-
                               TextField(
                                 controller: _bemCtrl,
                                 maxLines: 2,
-                                decoration:
-                                    const InputDecoration(labelText: 'Bemerkung (optional)'),
+                                decoration: const InputDecoration(
+                                  labelText: 'Bemerkung (optional)',
+                                ),
                               ),
 
                               const SizedBox(height: 16),
@@ -852,25 +1058,31 @@ class _LueftungScreenState extends State<LueftungScreen> {
                                 runSpacing: 8,
                                 children: [
                                   OutlinedButton.icon(
-                                      onPressed: _pickMedia,
-                                      icon: const Icon(Icons.image),
-                                      label: const Text('Medien')),
+                                    onPressed: _pickMedia,
+                                    icon: const Icon(Icons.image),
+                                    label: const Text('Medien'),
+                                  ),
                                   OutlinedButton.icon(
-                                      onPressed: _pickAudio,
-                                      icon: const Icon(Icons.mic),
-                                      label: const Text('Audio')),
+                                    onPressed: _pickAudio,
+                                    icon: const Icon(Icons.mic),
+                                    label: const Text('Audio'),
+                                  ),
                                   OutlinedButton.icon(
                                     onPressed: _pickFolder,
                                     icon: const Icon(Icons.folder_open),
                                     label: const Text('PDF'),
                                     style: OutlinedButton.styleFrom(
-                                      backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                                      backgroundColor: Colors.blue.withValues(
+                                        alpha: 0.1,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text('📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}'),
+                              Text(
+                                '📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}',
+                              ),
                             ],
                           ),
                         ),
@@ -887,7 +1099,11 @@ class _LueftungScreenState extends State<LueftungScreen> {
   Future<void> _onSave() async {
     if (_session == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.')),
+        const SnackBar(
+          content: Text(
+            'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+          ),
+        ),
       );
       return;
     }
@@ -899,26 +1115,31 @@ class _LueftungScreenState extends State<LueftungScreen> {
       message: '"Kein Befund" schließt Schäden aus.',
     );
     if (!keinBefundCheck.isValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(keinBefundCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(keinBefundCheck.message!)));
       return;
     }
 
     if (_art == 'Neu' && _kl == 'D') {
-      final ok = await _confirm('KL D bestätigen', 'Die KL ist auf Standard D gesetzt. Bitte bestätigen, dass KL D korrekt ist.');
+      final ok = await _confirm(
+        'KL D bestätigen',
+        'Die KL ist auf Standard D gesetzt. Bitte bestätigen, dass KL D korrekt ist.',
+      );
       if (!ok) return;
     }
 
     var bemerkung = _bemCtrl.text.trim();
     if (_fotos.isNotEmpty || _videos.isNotEmpty) {
-      final mv = '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
+      final mv =
+          '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
       bemerkung = bemerkung.isEmpty ? mv : '$bemerkung | $mv';
     }
 
     final pos = _posCtrl.text.trim();
     final idNr = _idNrCtrl.text.trim();
-    final existingKey = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final existingKey =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     final uniqueCheck = await ValidationService.validateUniquePosition(
       evnr: _session!.evnr,
       strasse: _session!.strasse,
@@ -927,13 +1148,19 @@ class _LueftungScreenState extends State<LueftungScreen> {
     );
     if (!uniqueCheck.isValid) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uniqueCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(uniqueCheck.message!)));
       return;
     }
 
-    final gps = await GpsService.getCurrentLocation();
+    final gps = hasNichtImNis(_verfuegbarkeit)
+        ? ((await GpsService.getCurrentLocation()) ??
+              widget.existingMeta?['gps'])
+        : null;
+    final deckelLabel = _art == 'Neu'
+        ? buildSchachtDeckelartLabel(_deckel, _deckelBemCtrl.text)
+        : '';
 
     final meta = {
       'typ': 'LÜ',
@@ -942,9 +1169,14 @@ class _LueftungScreenState extends State<LueftungScreen> {
       'erfasser': _session!.erfasser,
       'zeitIso': _session!.zeitIso,
       'wetter': _session!.wetter,
+      'temperatur': _session!.temperatur,
       'posNr': pos,
       'idNr': idNr,
       'art': _art,
+      'deckel': deckelLabel,
+      'deckelBem': _art == 'Neu' && _deckel == 'Bemerkung'
+          ? _deckelBemCtrl.text.trim()
+          : '',
       'kl': _art == 'Neu' ? _kl : '',
       'verfuegbarkeit': _verfuegbarkeit.toList(),
       'statusVorOrt': _statusVorOrt.toList(),
@@ -964,7 +1196,8 @@ class _LueftungScreenState extends State<LueftungScreen> {
         ? existingKey!
         : 'obj_${_session!.evnr}_${_session!.strasse}_${pos}_LÜ';
     if (_isEdit) {
-      meta['createdAt'] = widget.existingMeta?['createdAt'] ?? meta['createdAt'];
+      meta['createdAt'] =
+          widget.existingMeta?['createdAt'] ?? meta['createdAt'];
     }
     meta['storageKey'] = metaKey;
     await SpeicherService.upsertEntry(metaKey, meta);
@@ -975,27 +1208,37 @@ class _LueftungScreenState extends State<LueftungScreen> {
         type: EntryType.lueftung,
         evnr: _session!.evnr,
         positionsnummer: pos,
-        titel: _keinBefund ? 'Kein Befund' : (_schaeden.isEmpty ? '—' : _schaeden.join(', ')),
+        titel: _keinBefund
+            ? 'Kein Befund'
+            : (_schaeden.isEmpty ? '—' : _schaeden.join(', ')),
         zeit: DateTime.now(),
         strasse: _session!.strasse,
         bemerkung: bemerkung.isEmpty ? null : bemerkung,
-        verfuegbarkeitLabel: _verfuegbarkeit.isEmpty ? null : _verfuegbarkeit.join(', '),
-        statusVorOrtLabel: _statusVorOrt.isEmpty ? null : _statusVorOrt.join(', '),
+        verfuegbarkeitLabel: _verfuegbarkeit.isEmpty
+            ? null
+            : _verfuegbarkeit.join(', '),
+        statusVorOrtLabel: _statusVorOrt.isEmpty
+            ? null
+            : _statusVorOrt.join(', '),
         notizen: null,
-        spezial: _art == 'Neu' ? 'KL: $_kl' : null,
+        spezial: _art == 'Neu' ? 'Deckel: $deckelLabel | KL: $_kl' : null,
       );
       await Repository.instance.add(entry);
     } catch (_) {}
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lüftung gespeichert (im Gesamt-Export enthalten).')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Lüftung gespeichert (im Gesamt-Export enthalten).'),
+      ),
+    );
     Navigator.pop(context);
   }
 
   // ----------------------------- Small UI helpers -----------------------------
   Widget _label(String t) => FieldLabel(t);
 
-  Widget _kv(String k, String v) => KvRow(label: k, value: v, labelWidth: 40);
+  Widget _kv(String k, String v) => KvRow(label: k, value: v);
 
   String _wIcon(String key) {
     switch (key) {

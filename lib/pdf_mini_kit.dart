@@ -10,10 +10,18 @@ class PdfMiniKit {
 
   static Future<pw.ThemeData> _theme() async {
     try {
-      final reg = pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Regular.ttf'));
-      final bold = pw.Font.ttf(await rootBundle.load('assets/fonts/Roboto-Bold.ttf'));
-      final notoReg = pw.Font.ttf(await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'));
-      final notoBold = pw.Font.ttf(await rootBundle.load('assets/fonts/NotoSans-Bold.ttf'));
+      final reg = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/Roboto-Regular.ttf'),
+      );
+      final bold = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/Roboto-Bold.ttf'),
+      );
+      final notoReg = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'),
+      );
+      final notoBold = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/NotoSans-Bold.ttf'),
+      );
       return pw.ThemeData.withFont(
         base: reg,
         bold: bold,
@@ -56,7 +64,18 @@ class PdfMiniKit {
     final gps = fields['GPS'] ?? '—';
 
     final details = Map<String, String>.from(fields);
-    details.removeWhere((k, v) => ['EVNr', 'Positionsnummer', 'ID-Nummer', 'Straße', 'Erfasser:in', 'Datum/Zeit', 'Wetter', 'GPS'].contains(k));
+    details.removeWhere(
+      (k, v) => [
+        'EVNr',
+        'Positionsnummer',
+        'ID-Nummer',
+        'Straße',
+        'Erfasser:in',
+        'Datum/Zeit',
+        'Wetter',
+        'GPS',
+      ].contains(k),
+    );
 
     final doc = pw.Document(theme: await _theme());
     doc.addPage(
@@ -75,7 +94,10 @@ class PdfMiniKit {
               wetter: wetter,
               gps: gps,
             ),
-            pw.Text('Vor-Ort-Befund', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Vor-Ort-Befund',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             _detailsTable(details),
             if (notes != null && notes.isNotEmpty) _notes(notes),
@@ -85,6 +107,7 @@ class PdfMiniKit {
     );
     return doc.save();
   }
+
   /// Erstellt ein Steckbrief-PDF für Einsteig (ES)
   static Future<List<int>> einsteigSteckbrief({
     required Map<String, String> fields,
@@ -104,6 +127,7 @@ class PdfMiniKit {
     final data = await PdfMiniKit.gSteckbrief(fields: fields, notes: notes);
     return data;
   }
+
   static Future<Uint8List> skSteckbrief({
     required Map<String, String> fields,
     List<String>? notes,
@@ -118,7 +142,18 @@ class PdfMiniKit {
     final gps = fields['GPS'] ?? '—';
 
     final details = Map<String, String>.from(fields);
-    details.removeWhere((k, v) => ['EVNr', 'Positionsnummer', 'ID-Nummer', 'Straße', 'Erfasser:in', 'Datum/Zeit', 'Wetter', 'GPS'].contains(k));
+    details.removeWhere(
+      (k, v) => [
+        'EVNr',
+        'Positionsnummer',
+        'ID-Nummer',
+        'Straße',
+        'Erfasser:in',
+        'Datum/Zeit',
+        'Wetter',
+        'GPS',
+      ].contains(k),
+    );
 
     final doc = pw.Document(theme: await _theme());
     doc.addPage(
@@ -137,7 +172,10 @@ class PdfMiniKit {
               wetter: wetter,
               gps: gps,
             ),
-            pw.Text('Vor-Ort-Befund', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Vor-Ort-Befund',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             _detailsTable(details),
             if (notes != null && notes.isNotEmpty) _notes(notes),
@@ -147,6 +185,7 @@ class PdfMiniKit {
     );
     return doc.save();
   }
+
   static Future<Uint8List> gSteckbrief({
     required Map<String, String> fields,
     List<String>? notes,
@@ -168,7 +207,12 @@ class PdfMiniKit {
       return null;
     }
 
-    String? cmFromPossible(Map<String, String> map, String cmKey, String humanCmKey, String mKey) {
+    String? cmFromPossible(
+      Map<String, String> map,
+      String cmKey,
+      String humanCmKey,
+      String mKey,
+    ) {
       // Prefer normalized cmKey, fallback to human-readable cm, then to meters (convert)
       final a = findFirst(map, [cmKey, humanCmKey]);
       if (filled(a)) return a;
@@ -202,25 +246,75 @@ class PdfMiniKit {
     if (filled(idNr)) details['ID-Nummer'] = idNr!;
 
     // First add basic fields (robust mit Synonymen)
-    putIfFilled(details, 'Verfügbarkeit', findFirst(fields, ['Verfügbarkeit', 'verfuegbarkeit']));
-    putIfFilled(details, 'Status vor Ort', findFirst(fields, ['Status vor Ort', 'statusVorOrt']));
-    putIfFilled(details, 'Grubenart', findFirst(fields, ['Grubenart', 'Grubentyp', 'grubentyp']));
-    putIfFilled(details, 'Deckelart', findFirst(fields, ['Deckelart', 'Deckel', 'deckel']));
+    putIfFilled(
+      details,
+      'Verfügbarkeit',
+      findFirst(fields, ['Verfügbarkeit', 'verfuegbarkeit']),
+    );
+    putIfFilled(
+      details,
+      'Status vor Ort',
+      findFirst(fields, ['Status vor Ort', 'statusVorOrt']),
+    );
+    putIfFilled(
+      details,
+      'Grubenart',
+      findFirst(fields, ['Grubenart', 'Grubentyp', 'grubentyp']),
+    );
+    putIfFilled(
+      details,
+      'Deckelart',
+      findFirst(fields, ['Deckelart', 'Deckel', 'deckel']),
+    );
     putIfFilled(details, 'KL', findFirst(fields, ['KL', 'kl']));
     putIfFilled(details, 'Schäden', findFirst(fields, ['Schäden', 'schaeden']));
 
     // Tiefe (cm)
-    final tiefe = cmFromPossible(fields, 'tiefe_cm', 'Grubentiefe (cm)', 'tiefe_m');
+    final tiefe = cmFromPossible(
+      fields,
+      'tiefe_cm',
+      'Grubentiefe (cm)',
+      'tiefe_m',
+    );
     if (filled(tiefe)) details['Grubentiefe (cm)'] = tiefe!;
 
     // Wasserstand (cm)
-    final wasser = cmFromPossible(fields, 'wasser_cm', 'Wasserstand (cm)', 'wasser_m');
+    final wasser = cmFromPossible(
+      fields,
+      'wasser_cm',
+      'Wasserstand (cm)',
+      'wasser_m',
+    );
     if (filled(wasser)) details['Wasserstand (cm)'] = wasser!;
 
     // Rest
-    putIfFilled(details, 'Anschluss am Kanal', findFirst(fields, ['anschluss', 'Anschluss am Kanal']));
-    putIfFilled(details, 'Überlauf', findFirst(fields, ['teller', 'Teller', 'Überlauf']));
-    putIfFilled(details, 'Bemerkung', findFirst(fields, ['Bemerkung', 'bemerkung', 'Bemerkung']));
+    putIfFilled(
+      details,
+      'Anschluss am Kanal',
+      findFirst(fields, ['anschluss', 'Anschluss am Kanal']),
+    );
+    putIfFilled(
+      details,
+      'Überlauf',
+      findFirst(fields, ['teller', 'Teller', 'Überlauf']),
+    );
+    putIfFilled(
+      details,
+      'Filtersand',
+      findFirst(fields, ['Filtersand', 'filtersand', 'filtersandJa']),
+    );
+    putIfFilled(
+      details,
+      'Filtersand Eigenschaften',
+      findFirst(fields, ['Filtersand Eigenschaften', 'filtersandEigensch']),
+    );
+    putIfFilled(details, 'Baujahr', findFirst(fields, ['Baujahr', 'baujahr']));
+    putIfFilled(
+      details,
+      'Bemerkung',
+      findFirst(fields, ['Bemerkung', 'bemerkung', 'Bemerkung']),
+    );
+    putIfFilled(details, 'Beschreibung', fields['Beschreibung']);
 
     final doc = pw.Document(theme: await _theme());
     doc.addPage(
@@ -229,7 +323,7 @@ class PdfMiniKit {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             _headerSection(
-              title: 'G - Grube - Steckbrief',
+              title: 'VG - Grube - Steckbrief',
               evnr: evnr,
               posNr: posNr,
               idNr: idNr,
@@ -239,7 +333,10 @@ class PdfMiniKit {
               wetter: wetter,
               gps: gps,
             ),
-            pw.Text('Vor-Ort-Befund', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Vor-Ort-Befund',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             if (details.isEmpty) pw.Text('—') else _detailsTable(details),
             if (notes != null && notes.isNotEmpty) _notes(notes),
@@ -255,23 +352,85 @@ class PdfMiniKit {
     required List<Map<String, String>> rows,
   }) async {
     pw.Widget tableG(List<Map<String, String>> data) {
-      final header = pw.TableRow(children: [
-        pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Wasserstand (cm)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-        pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Grubentiefe (cm)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-        pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Anschluss', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-        pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Überlauf', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-        pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Art', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-      ]);
+      final header = pw.TableRow(
+        children: [
+          pw.Padding(
+            padding: pw.EdgeInsets.all(6),
+            child: pw.Text(
+              'Wasserstand (cm)',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(6),
+            child: pw.Text(
+              'Grubentiefe (cm)',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(6),
+            child: pw.Text(
+              'Anschluss',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(6),
+            child: pw.Text(
+              'Überlauf',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(6),
+            child: pw.Text(
+              'Art',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+        ],
+      );
       final dataRows = data
-          .map((r) => pw.TableRow(children: [
-                pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(r['wasser_cm']?.replaceAll('.', ',') ?? r['wasser_m']?.replaceAll('.', ',') ?? '')),
-                pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(r['tiefe_cm']?.replaceAll('.', ',') ?? r['tiefe_m']?.replaceAll('.', ',') ?? '')),
-                pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(r['anschluss'] ?? '')),
-                pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(r['teller'] ?? '')),
-                pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(r['art'] ?? '')),
-              ]))
+          .map(
+            (r) => pw.TableRow(
+              children: [
+                pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(
+                    r['wasser_cm']?.replaceAll('.', ',') ??
+                        r['wasser_m']?.replaceAll('.', ',') ??
+                        '',
+                  ),
+                ),
+                pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(
+                    r['tiefe_cm']?.replaceAll('.', ',') ??
+                        r['tiefe_m']?.replaceAll('.', ',') ??
+                        '',
+                  ),
+                ),
+                pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(r['anschluss'] ?? ''),
+                ),
+                pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(r['teller'] ?? ''),
+                ),
+                pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(r['art'] ?? ''),
+                ),
+              ],
+            ),
+          )
           .toList();
-      return pw.Table(border: pw.TableBorder.all(width: 0.5), children: [header, ...dataRows]);
+      return pw.Table(
+        border: pw.TableBorder.all(width: 0.5),
+        children: [header, ...dataRows],
+      );
     }
 
     final doc = pw.Document(theme: await _theme());
@@ -280,8 +439,10 @@ class PdfMiniKit {
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('G - Gruben - Gesamtblatt (EVNr: $evnr)',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'VG - Gruben - Gesamtblatt (EVNr: $evnr)',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             tableG(rows),
           ],
@@ -290,6 +451,7 @@ class PdfMiniKit {
     );
     return doc.save();
   }
+
   static Future<Uint8List> lSteckbrief({
     required Map<String, String> fields,
     List<String>? notes,
@@ -304,7 +466,18 @@ class PdfMiniKit {
     final gps = fields['GPS'] ?? '—';
 
     final details = Map<String, String>.from(fields);
-    details.removeWhere((k, v) => ['EVNr', 'Positionsnummer', 'ID-Nummer', 'Straße', 'Erfasser:in', 'Datum/Zeit', 'Wetter', 'GPS'].contains(k));
+    details.removeWhere(
+      (k, v) => [
+        'EVNr',
+        'Positionsnummer',
+        'ID-Nummer',
+        'Straße',
+        'Erfasser:in',
+        'Datum/Zeit',
+        'Wetter',
+        'GPS',
+      ].contains(k),
+    );
 
     final doc = pw.Document(theme: await _theme());
     doc.addPage(
@@ -323,7 +496,10 @@ class PdfMiniKit {
               wetter: wetter,
               gps: gps,
             ),
-            pw.Text('Vor-Ort-Befund', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Vor-Ort-Befund',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             _detailsTable(details),
             if (notes != null && notes.isNotEmpty) _notes(notes),
@@ -351,9 +527,21 @@ class PdfMiniKit {
 
     // Vor-Ort-Details (alles außer Kopfzeilen-Infos)
     final details = Map<String, String>.from(felder);
-    details.removeWhere((k, v) => ['EVNr', 'Positionsnummer', 'ID-Nummer', 'Straße', 'Erfasser:in', 'Datum/Zeit', 'Wetter', 'GPS'].contains(k));
+    details.removeWhere(
+      (k, v) => [
+        'EVNr',
+        'Positionsnummer',
+        'ID-Nummer',
+        'Straße',
+        'Erfasser:in',
+        'Datum/Zeit',
+        'Wetter',
+        'GPS',
+      ].contains(k),
+    );
     // Sicherstellen: Schäden wird angezeigt (Fallback auf 'schaeden')
-    if (!(details.containsKey('Schäden') && (details['Schäden'] ?? '').trim().isNotEmpty)) {
+    if (!(details.containsKey('Schäden') &&
+        (details['Schäden'] ?? '').trim().isNotEmpty)) {
       final s = (felder['Schäden'] ?? felder['schaeden'] ?? '').trim();
       if (s.isNotEmpty && s != '—' && s != '-') {
         details['Schäden'] = s;
@@ -376,7 +564,10 @@ class PdfMiniKit {
         details['Schäden'] = summary;
       } else if (schadenText.contains('Leitung kaputt')) {
         // Ersetze "Leitung kaputt" durch die konkrete Auflistung
-        final replaced = schadenText.replaceFirst(RegExp(r'Leitung kaputt(\s*\(.*?\))?'), summary);
+        final replaced = schadenText.replaceFirst(
+          RegExp(r'Leitung kaputt(\s*\(.*?\))?'),
+          summary,
+        );
         details['Schäden'] = replaced;
       } else {
         // An bestehenden Schadenstext anhängen
@@ -401,7 +592,10 @@ class PdfMiniKit {
               wetter: wetter,
               gps: gps,
             ),
-            pw.Text('Vor-Ort-Befund', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Vor-Ort-Befund',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
             _detailsTable(details),
             if (leitungRows.isNotEmpty) _leitungTable(leitungRows),
@@ -471,7 +665,11 @@ class PdfMiniKit {
     putIfFilled(detailsForTable, 'Eingang', fields['Eingang']);
     putIfFilled(detailsForTable, 'Einsteigart', fields['Einsteigart']);
     // Steigeisen-Stand (Alt/Neu) anzeigen, wenn Einsteigart = Steigeisen
-    putIfFilled(detailsForTable, 'Steigeisen (Stand)', fields['steigeisenStand']);
+    putIfFilled(
+      detailsForTable,
+      'Steigeisen (Stand)',
+      fields['steigeisenStand'],
+    );
     putIfFilled(detailsForTable, 'Deckelart', fields['Deckelart']);
     putIfFilled(detailsForTable, 'KL', fields['KL']);
 
@@ -479,26 +677,50 @@ class PdfMiniKit {
     putIfFilled(detailsForTable, 'Schäden', fields['Schäden']);
 
     // Objektattribute
-    putIfFilled(detailsForTable, 'Schacht Durchmesser', fields['Schacht Durchmesser']);
+    putIfFilled(
+      detailsForTable,
+      'Schacht Durchmesser',
+      fields['Schacht Durchmesser'],
+    );
     putIfFilled(detailsForTable, 'Kanalprofil', fields['Kanalprofil']);
 
     // Örtlichkeit
     putIfFilled(detailsForTable, 'Örtlichkeit', fields['Örtlichkeit']);
-    putIfFilled(detailsForTable, 'Örtlichkeit – Bemerkung', fields['Örtlichkeit – Bemerkung']);
+    putIfFilled(
+      detailsForTable,
+      'Örtlichkeit – Bemerkung',
+      fields['Örtlichkeit – Bemerkung'],
+    );
 
     // Oberfläche
     putIfFilled(detailsForTable, 'Oberflächenart', fields['Oberflächenart']);
-    putIfFilled(detailsForTable, 'Oberfläche – Bemerkung', fields['Oberfläche – Bemerkung']);
+    putIfFilled(
+      detailsForTable,
+      'Oberfläche – Bemerkung',
+      fields['Oberfläche – Bemerkung'],
+    );
 
     // Schachtkopfdaten
-    putIfFilled(detailsForTable, 'Schachtkopfdaten', fields['Schachtkopfdaten']);
-    putIfFilled(detailsForTable, 'Übergangsplatte (Höhe)', fields['Übergangsplatte (Höhe)']);
+    putIfFilled(
+      detailsForTable,
+      'Schachtkopfdaten',
+      fields['Schachtkopfdaten'],
+    );
+    putIfFilled(
+      detailsForTable,
+      'Übergangsplatte (Höhe)',
+      fields['Übergangsplatte (Höhe)'],
+    );
 
     // Maße (nur bei RF aktiv am Screen – aber PDF zeigt nur was gefüllt ist)
-    putIfFilledCm('815', fields['815'] ?? fields['Ausgleichsringe']);
 
     // Steigeisen-Block innerhalb Maße
-    final showSt = rf || filledEs(st1Hoehe) || filledEs(st1Rf) || filledEs(st2Hoehe) || filledEs(st2Rf);
+    final showSt =
+        rf ||
+        filledEs(st1Hoehe) ||
+        filledEs(st1Rf) ||
+        filledEs(st2Hoehe) ||
+        filledEs(st2Rf);
     if (showSt) {
       final s1 = [
         if (filledEs(st1Hoehe)) 'Höhe ${cm(st1Hoehe!)}',
@@ -521,6 +743,7 @@ class PdfMiniKit {
 
     // Bemerkung
     putIfFilled(detailsForTable, 'Bemerkung', fields['Bemerkung']);
+    putIfFilled(detailsForTable, 'Beschreibung', fields['Beschreibung']);
 
     final doc = pw.Document(theme: await _theme());
     doc.addPage(
@@ -540,8 +763,10 @@ class PdfMiniKit {
               gps: gps,
             ),
 
-            pw.Text('Vor-Ort-Befund',
-                style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Vor-Ort-Befund',
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 8),
 
             if (detailsForTable.isEmpty)
@@ -551,8 +776,13 @@ class PdfMiniKit {
 
             if (rf) ...[
               pw.SizedBox(height: 14),
-                pw.Text('Hinweis: Keine Rückenfreiheit (Maße in cm siehe oben).',
-                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'Hinweis: Keine Rückenfreiheit (Maße in cm siehe oben).',
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
             ],
 
             if (notes != null && notes.isNotEmpty) _notes(notes),
@@ -569,27 +799,52 @@ class PdfMiniKit {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.SizedBox(height: 16),
-        pw.Text('Leitungsschäden', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+        pw.Text(
+          'Leitungsschäden',
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        ),
         pw.SizedBox(height: 6),
         pw.Table(
           border: pw.TableBorder.all(width: 0.5),
           columnWidths: {0: pw.FixedColumnWidth(80), 1: pw.FlexColumnWidth()},
           children: [
-            pw.TableRow(children: [
-              pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Länge (m)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-              pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Art', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            ]),
-            ...rows.map((e) => pw.TableRow(children: [
-              pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(e['meter'] ?? '')),
-              pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(e['art'] ?? '')),
-            ])),
+            pw.TableRow(
+              children: [
+                pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(
+                    'Länge (m)',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+                pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(
+                    'Art',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            ...rows.map(
+              (e) => pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: pw.EdgeInsets.all(6),
+                    child: pw.Text(e['meter'] ?? ''),
+                  ),
+                  pw.Padding(
+                    padding: pw.EdgeInsets.all(6),
+                    child: pw.Text(e['art'] ?? ''),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ],
     );
   }
-
-  
 
   /// Kopfzeile: kompakt ohne ID (geht in Tabelle), nur EVNr/Straße/Erfasser/Datum/Zeit/Wetter
   static pw.Widget _headerSection({
@@ -606,7 +861,10 @@ class PdfMiniKit {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(title, style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+        pw.Text(
+          title,
+          style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+        ),
         pw.SizedBox(height: 10),
 
         pw.Container(
@@ -618,12 +876,30 @@ class PdfMiniKit {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('EVNr: $evnr', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'EVNr: $evnr',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
               pw.SizedBox(height: 4),
-              pw.Text('Straße: $strasse', style: const pw.TextStyle(fontSize: 10)),
-              pw.Text('Erfasser: $erfasser', style: const pw.TextStyle(fontSize: 10)),
-              pw.Text('Datum/Zeit: $datumZeit', style: const pw.TextStyle(fontSize: 10)),
-              pw.Text('Wetter: $wetter', style: const pw.TextStyle(fontSize: 10)),
+              pw.Text(
+                'Straße: $strasse',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.Text(
+                'Erfasser: $erfasser',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.Text(
+                'Datum/Zeit: $datumZeit',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.Text(
+                'Wetter: $wetter',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
               if (gps != null && gps.trim().isNotEmpty && gps != '—')
                 pw.Text('GPS: $gps', style: const pw.TextStyle(fontSize: 10)),
             ],
@@ -637,13 +913,23 @@ class PdfMiniKit {
   /// Details-Tabelle (nur Vor-Ort-Daten: Schaden, Verfügbarkeit, Status, Bemerkung, etc.)
   static pw.Widget _detailsTable(Map<String, String> details) {
     final rows = details.entries
-        .map((e) => pw.TableRow(children: [
+        .map(
+          (e) => pw.TableRow(
+            children: [
               pw.Padding(
-                  padding: pw.EdgeInsets.all(6),
-                  child: pw.Text(e.key,
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-              pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(e.value)),
-            ]))
+                padding: pw.EdgeInsets.all(6),
+                child: pw.Text(
+                  e.key,
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              pw.Padding(
+                padding: pw.EdgeInsets.all(6),
+                child: pw.Text(e.value),
+              ),
+            ],
+          ),
+        )
         .toList();
     return pw.Table(
       border: pw.TableBorder.all(width: 0.5),
@@ -651,8 +937,6 @@ class PdfMiniKit {
       columnWidths: {0: pw.FixedColumnWidth(190)},
     );
   }
-
-  
 
   static pw.Widget _notes(List<String> notes) {
     // Parse media notes (emoji-based or text) and render icons+text when possible
@@ -681,14 +965,18 @@ class PdfMiniKit {
 
     final children = <pw.Widget>[];
     children.add(pw.SizedBox(height: 12));
-    children.add(pw.Text('Notizen', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)));
+    children.add(
+      pw.Text('Notizen', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+    );
     children.add(pw.SizedBox(height: 6));
 
     if (fotos > 0 || videos > 0) {
       final parts = <String>[];
       if (fotos > 0) parts.add('Fotos: $fotos');
       if (videos > 0) parts.add('Videos: $videos');
-      children.add(pw.Text(parts.join(' | '), style: const pw.TextStyle(fontSize: 10)));
+      children.add(
+        pw.Text(parts.join(' | '), style: const pw.TextStyle(fontSize: 10)),
+      );
       if (other.isNotEmpty) children.add(pw.SizedBox(height: 6));
     }
 
@@ -696,6 +984,9 @@ class PdfMiniKit {
       children.add(pw.Bullet(text: o));
     }
 
-    return pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: children);
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: children,
+    );
   }
 }

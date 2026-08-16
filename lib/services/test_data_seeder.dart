@@ -6,7 +6,7 @@ import 'speicher_service.dart';
 class TestdatenSeeder {
   static Future<void> seedTestdaten() async {
     final now = DateTime.now().toIso8601String();
-    
+
     final testEntries = [
       // ===== ES (Einstieg) - 3 Positionen =====
       {
@@ -30,14 +30,23 @@ class TestdatenSeeder {
           'kl': 'D',
           'verfuegbarkeit': ['Ergänzen', 'gibt es nicht'],
           'statusVorOrt': ['zugeparkt'],
-          'schaeden': ['1. Steigeisen entfernen', 'Leiter einbauen', 'Keine Rückenfreiheit'],
+          'schaeden': [
+            '1. Steigeisen entfernen',
+            'Leiter einbauen',
+            'Keine Rückenfreiheit',
+          ],
           'keinBefund': false,
           'abteilungen': ['312 IZ AR', '312 Ost'],
           'bemerkung': 'Reinigung erforderlich',
           'mediaFotos': ['App/ES/ES_Bild.png'],
           'mediaVideos': ['App/ES/ES_Video.mp4'],
           'mediaAudios': ['App/ES/ES_Audio.mp3'],
-          'mediaPdfs': ['App/ES/ES_Doku.pdf', 'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Word_Test.docx', 'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Excel_Test.xlsx', 'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_PowerPoint_Test.pptx'],
+          'mediaPdfs': [
+            'App/ES/ES_Doku.pdf',
+            'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Word_Test.docx',
+            'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_PowerPoint_Test.pptx',
+          ],
           // RF-Felder (Keine Rückenfreiheit) - gemäß einsteig_screen.dart Feldnamen
           'durchmesser': 'DN 1000',
           'kanalprofil': 'Kreisprofil',
@@ -56,7 +65,7 @@ class TestdatenSeeder {
           'mKonusEnd': '200',
           'mBerme': '15',
           'mSolltiefe': '220',
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_1a_ES',
@@ -77,7 +86,7 @@ class TestdatenSeeder {
           'deckel': 'Mannloch',
           'kl': 'C',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_2_ES',
@@ -99,14 +108,14 @@ class TestdatenSeeder {
           'schaeden': ['Schrauben fest', 'Ausgleichsringe defekt'],
           'keinBefund': false,
           'abteilungen': ['313 TU', '313 BauKo'],
-        }
+        },
       },
 
-      // ===== VS (Gruben) - 3 Positionen =====
+      // ===== VG (Gruben) - 3 Positionen =====
       {
         'key': 'obj_99000_Musterstrasse_1_2a',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -130,13 +139,18 @@ class TestdatenSeeder {
           'abteilungen': ['313 BU', '313 TU'],
           'mediaFotos': ['App/Grube/VG_Bild.png'],
           'mediaVideos': ['App/Grube/VG_Video.mp4'],
-          'mediaPdfs': ['App/Grube/VG_Doku.pdf', 'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Word_Test.docx', 'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Excel_Test.xlsx', 'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/Grube/VG_Doku.pdf',
+            'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Word_Test.docx',
+            'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_3_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -151,12 +165,12 @@ class TestdatenSeeder {
           'kl': 'D',
           'anschlussJa': false,
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_3a_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -175,7 +189,7 @@ class TestdatenSeeder {
           'schaeden': ['Versottet'],
           'keinBefund': false,
           'abteilungen': ['312 Service', '312 West'],
-        }
+        },
       },
 
       // ===== LÜ (Lüftung) - 3 Positionen =====
@@ -200,8 +214,13 @@ class TestdatenSeeder {
           'abteilungen': ['312 IZ AR'],
           'mediaFotos': ['App/L/L_Bild.png'],
           'mediaVideos': ['App/L/L_Video.mp4'],
-          'mediaPdfs': ['App/L/L_Doku.pdf', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Word_Test.docx', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Excel_Test.xlsx', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/L/L_Doku.pdf',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Word_Test.docx',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_4a_LÜ',
@@ -219,7 +238,7 @@ class TestdatenSeeder {
           'art': 'Neu',
           'kl': 'D',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_5_LÜ',
@@ -238,7 +257,7 @@ class TestdatenSeeder {
           'schaeden': ['Umbau auf BEGU'],
           'keinBefund': false,
           'abteilungen': ['312 Ost', '313 TU'],
-        }
+        },
       },
 
       // ===== SSK (Sinkkasten) - 3 Positionen =====
@@ -270,8 +289,13 @@ class TestdatenSeeder {
           ],
           'mediaFotos': ['App/SSK/SSK_Bild.png'],
           'mediaVideos': ['App/SSK/SSK_Video.mp4'],
-          'mediaPdfs': ['App/SSK/SSK_Doku.pdf', 'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Word_Test.docx', 'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Excel_Test.xlsx', 'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/SSK/SSK_Doku.pdf',
+            'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Word_Test.docx',
+            'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_6a_SSK',
@@ -289,7 +313,7 @@ class TestdatenSeeder {
           'gruppe': 'Weitere Hersteller',
           'auspraegung': 'Passavant',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_7_SSK',
@@ -314,7 +338,7 @@ class TestdatenSeeder {
           'leitung': [
             {'meter': '3,0', 'art': 'Beton'},
           ],
-        }
+        },
       },
 
       // ===== SK (Schieberkappen) - 3 Positionen =====
@@ -339,8 +363,13 @@ class TestdatenSeeder {
           'schaeden': ['Austausch erforderlich'],
           'mediaFotos': ['App/SK/SK_Bild.png'],
           'mediaVideos': ['App/SK/SK_Video.mp4'],
-          'mediaPdfs': ['App/SK/SK_Doku.pdf', 'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Word_Test.docx', 'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Excel_Test.xlsx', 'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/SK/SK_Doku.pdf',
+            'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Word_Test.docx',
+            'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_9_SK',
@@ -360,7 +389,7 @@ class TestdatenSeeder {
           'keinBefund': true,
           'austauschErforderlich': false,
           'abteilungen': [],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_10_SK',
@@ -381,7 +410,7 @@ class TestdatenSeeder {
           'keinBefund': false,
           'abteilungen': ['312 IZ AR', '312 Ost'],
           'schaeden': ['Austausch erforderlich'],
-        }
+        },
       },
 
       // ===== KANAL - 3 Positionen =====
@@ -406,7 +435,7 @@ class TestdatenSeeder {
           'mediaAudios': [],
           'mediaPdfs': ['App/Kanal/Kanal_Doku.pdf'],
           'createdAt': now,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_10b_KANAL',
@@ -428,7 +457,7 @@ class TestdatenSeeder {
           'mediaVideos': [],
           'mediaAudios': [],
           'createdAt': now,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_10c_KANAL',
@@ -444,13 +473,14 @@ class TestdatenSeeder {
           'kanalprofil': 'DN 600 Maulprofil',
           'keinBefund': false,
           'schaeden': [],
-          'schadensdetails': 'Starke Wurzeleinwüchse, Risse im oberen Bereich, Sanierung erforderlich',
+          'schadensdetails':
+              'Starke Wurzeleinwüchse, Risse im oberen Bereich, Sanierung erforderlich',
           'abteilungen': ['313 BU', '313 BauKo'],
           'mediaFotos': [],
           'mediaVideos': ['App/SK/Kanal_Video.mp4'],
           'mediaAudios': [],
           'createdAt': now,
-        }
+        },
       },
 
       // ===== DIV (Sonstiges) - 3 Positionen =====
@@ -472,9 +502,14 @@ class TestdatenSeeder {
           'mediaFotos': ['App/DIV/DIV_Foto.png'],
           'mediaVideos': ['App/DIV/DIV_Video.mp4'],
           'mediaAudios': [],
-          'mediaPdfs': ['App/DIV/DIV_Doku.pdf', 'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Word_Test.docx', 'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Excel_Test.xlsx', 'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_PowerPoint_Test.pptx'],
+          'mediaPdfs': [
+            'App/DIV/DIV_Doku.pdf',
+            'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Word_Test.docx',
+            'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_PowerPoint_Test.pptx',
+          ],
           'createdAt': now,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_11a_DIV',
@@ -495,7 +530,7 @@ class TestdatenSeeder {
           'mediaVideos': [],
           'mediaAudios': [],
           'createdAt': now,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_12_DIV',
@@ -510,13 +545,14 @@ class TestdatenSeeder {
           'beschreibung': 'Übergabeschacht mit Ölabscheider',
           'keinBefund': false,
           'schaeden': [],
-          'schadensdetails': 'Ölabscheider stark verschmutzt, Reinigung dringend erforderlich',
+          'schadensdetails':
+              'Ölabscheider stark verschmutzt, Reinigung dringend erforderlich',
           'abteilungen': ['312 Ost', '312 West', '313 TU'],
           'mediaFotos': [],
           'mediaVideos': [],
           'mediaAudios': [],
           'createdAt': now,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_13_DIV',
@@ -537,7 +573,7 @@ class TestdatenSeeder {
           'mediaVideos': [],
           'mediaAudios': [],
           'createdAt': now,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_13a_SK',
@@ -557,7 +593,7 @@ class TestdatenSeeder {
           'austauschErforderlich': false,
           'keinBefund': true,
           'abteilungen': ['313 BauKo'],
-        }
+        },
       },
 
       // ===== Zusätzliche ES mit verschiedenen Szenarien =====
@@ -598,7 +634,7 @@ class TestdatenSeeder {
           'mBerme': '10',
           'mSolltiefe': '200',
           'mediaAudios': ['App/ES/ES_Audio.mp3'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_14a_ES',
@@ -618,7 +654,7 @@ class TestdatenSeeder {
           'deckel': 'DN',
           'kl': 'D',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_14b_ES',
@@ -643,14 +679,14 @@ class TestdatenSeeder {
           'keinBefund': false,
           'abteilungen': ['313 TU'],
           'bemerkung': 'Dringend Wartung erforderlich',
-        }
+        },
       },
 
-      // ===== Weitere VS (Gruben) mit verschiedenen Tiefen =====
+      // ===== Weitere VG (Gruben) mit verschiedenen Tiefen =====
       {
         'key': 'obj_99000_Musterstrasse_1_15_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -672,12 +708,12 @@ class TestdatenSeeder {
           'abteilungen': ['312 West', '313 BauKo'],
           'bemerkung': 'Hoher Wasserstand, Pumpe nötig',
           'mediaAudios': ['App/Grube/VG_Audio.mp3'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_15a_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -696,7 +732,7 @@ class TestdatenSeeder {
           'schaeden': ['Ausgleichsringe beschädigt'],
           'keinBefund': false,
           'abteilungen': ['312 Service', '313 BU'],
-        }
+        },
       },
 
       // ===== Weitere SSK mit komplexer Ablaufrinnen-Logik =====
@@ -727,7 +763,7 @@ class TestdatenSeeder {
           ],
           'bemerkung': 'Leitung stark beschädigt, Austausch empfohlen',
           'mediaAudios': ['App/SSK/SSK_Audio.mp3'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_16a_SSK',
@@ -747,7 +783,7 @@ class TestdatenSeeder {
           'ablaufrinne': true,
           'ablaufrinneVerbindung': '16',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_16b_SSK',
@@ -773,7 +809,7 @@ class TestdatenSeeder {
           'leitung': [
             {'meter': '6,0', 'art': 'Scherbe'},
           ],
-        }
+        },
       },
 
       // ===== Weitere Lüftungen =====
@@ -796,7 +832,7 @@ class TestdatenSeeder {
           'keinBefund': false,
           'abteilungen': ['312 IZ AR', '312 Ost', '313 BauKo'],
           'mediaAudios': ['App/L/L_Audio.mp3'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_17a_LÜ',
@@ -815,7 +851,7 @@ class TestdatenSeeder {
           'verfuegbarkeit': ['Nicht im NIS'],
           'statusVorOrt': ['Verkehr'],
           'keinBefund': true,
-        }
+        },
       },
 
       // ===== Weitere Schieber mit verschiedenen Zuständen =====
@@ -840,7 +876,7 @@ class TestdatenSeeder {
           'abteilungen': ['312 West', '313 BauKo', '313 TU'],
           'bemerkung': 'Überbauung durch Parkplatz',
           'mediaAudios': ['App/SK/SK_Audio.mp3'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_18a_SK',
@@ -859,7 +895,7 @@ class TestdatenSeeder {
           'statusVorOrt': [],
           'austauschErforderlich': false,
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_18b_SK',
@@ -880,7 +916,7 @@ class TestdatenSeeder {
           'schaeden': ['Austausch erforderlich'],
           'keinBefund': false,
           'abteilungen': ['312 IZ AR', '312 Ost'],
-        }
+        },
       },
 
       // ===== Weitere DIV mit verschiedenen Beschreibungen =====
@@ -897,10 +933,11 @@ class TestdatenSeeder {
           'gpsLat': '48.1425',
           'gpsLon': '11.5895',
           'posNr': '19',
-          'beschreibung': 'Kontrollschacht mit Wartung fällig - Spülung erforderlich',
+          'beschreibung':
+              'Kontrollschacht mit Wartung fällig - Spülung erforderlich',
           'abteilungen': ['312 Service', '313 TU'],
           'mediaAudios': ['App/DIV/DIV_Audio.mp3'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_19a_DIV',
@@ -915,9 +952,10 @@ class TestdatenSeeder {
           'gpsLat': '48.1427',
           'gpsLon': '11.5897',
           'posNr': '19a',
-          'beschreibung': 'Sonderkonstruktion - Pumpenschacht mit elektrischer Anlage',
+          'beschreibung':
+              'Sonderkonstruktion - Pumpenschacht mit elektrischer Anlage',
           'abteilungen': ['313 BauKo', '312 West'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_19b_DIV',
@@ -934,7 +972,7 @@ class TestdatenSeeder {
           'posNr': '19b',
           'beschreibung': 'Regenwasserbehandlungsanlage',
           'abteilungen': ['312 IZ AR', '313 TU', '312 Service'],
-        }
+        },
       },
 
       // ===== Noch mehr Positionen für Sortier-Test =====
@@ -957,12 +995,12 @@ class TestdatenSeeder {
           'deckel': 'DN',
           'kl': 'D',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_20a_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -980,7 +1018,7 @@ class TestdatenSeeder {
           'anschlussJa': true,
           'teller': 'nicht offen',
           'keinBefund': true,
-        }
+        },
       },
 
       // ===== Positionen 21-30 inkl. a/b Varianten (Logiktest) =====
@@ -1001,7 +1039,13 @@ class TestdatenSeeder {
           'deckel': 'DN',
           'kl': 'D',
           'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'gibt es nicht'],
-          'statusVorOrt': ['zugeparkt', 'Verkehr', 'überbaut', 'zugewachsen', 'unterm Erdreich/Straße'],
+          'statusVorOrt': [
+            'zugeparkt',
+            'Verkehr',
+            'überbaut',
+            'zugewachsen',
+            'unterm Erdreich/Straße',
+          ],
           'schaeden': [
             'Schrauben fest',
             'Schacht locker',
@@ -1013,12 +1057,23 @@ class TestdatenSeeder {
             'Keine Rückenfreiheit',
           ],
           'keinBefund': false,
-          'abteilungen': ['312 IZ AR', '312 Ost', '312 West', '313 BU', '313 TU'],
+          'abteilungen': [
+            '312 IZ AR',
+            '312 Ost',
+            '312 West',
+            '313 BU',
+            '313 TU',
+          ],
           'bemerkung': 'Volltest ES mit allen Optionen',
           'mediaFotos': ['App/ES/ES_Bild.png'],
           'mediaVideos': ['App/ES/ES_Video.mp4'],
           'mediaAudios': ['App/ES/ES_Audio.mp3'],
-          'mediaPdfs': ['App/ES/ES_Doku.pdf', 'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Word_Test.docx', 'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Excel_Test.xlsx', 'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_PowerPoint_Test.pptx'],
+          'mediaPdfs': [
+            'App/ES/ES_Doku.pdf',
+            'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Word_Test.docx',
+            'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/01_Einstiegschacht/01_Einstiegschacht_PowerPoint_Test.pptx',
+          ],
           'durchmesser': 'DN 1000',
           'kanalprofil': 'Kreisprofil',
           'oertlichkeit': 'Hauptstraße',
@@ -1036,7 +1091,7 @@ class TestdatenSeeder {
           'mKonusEnd': '200',
           'mBerme': '15',
           'mSolltiefe': '220',
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_21a_ES',
@@ -1053,7 +1108,7 @@ class TestdatenSeeder {
           'deckel': 'Budaplan',
           'kl': 'C',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_21b_ES',
@@ -1070,13 +1125,13 @@ class TestdatenSeeder {
           'deckel': 'Mannloch',
           'kl': 'B',
           'keinBefund': true,
-        }
+        },
       },
 
       {
         'key': 'obj_99000_Musterstrasse_1_22_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -1091,21 +1146,36 @@ class TestdatenSeeder {
           'anschlussJa': true,
           'teller': 'offen',
           'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'gibt es nicht'],
-          'statusVorOrt': ['zugeparkt', 'Verkehr', 'überbaut', 'zugewachsen', 'unterm Erdreich/Straße'],
-          'schaeden': ['Schacht locker', 'Ausgleichsringe beschädigt', 'Versottet'],
+          'statusVorOrt': [
+            'zugeparkt',
+            'Verkehr',
+            'überbaut',
+            'zugewachsen',
+            'unterm Erdreich/Straße',
+          ],
+          'schaeden': [
+            'Schacht locker',
+            'Ausgleichsringe beschädigt',
+            'Versottet',
+          ],
           'keinBefund': false,
           'abteilungen': ['312 Service', '312 West', '313 BauKo'],
-          'bemerkung': 'VS Volltest mit allen Optionen',
+          'bemerkung': 'VG Volltest mit allen Optionen',
           'mediaFotos': ['App/Grube/VG_Bild.png'],
           'mediaVideos': ['App/Grube/VG_Video.mp4'],
           'mediaAudios': ['App/Grube/VG_Audio.mp3'],
-          'mediaPdfs': ['App/Grube/VG_Doku.pdf', 'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Word_Test.docx', 'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Excel_Test.xlsx', 'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/Grube/VG_Doku.pdf',
+            'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Word_Test.docx',
+            'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/02_Sickergrube/02_Sickergrube_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_22a_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -1118,12 +1188,12 @@ class TestdatenSeeder {
           'anschlussJa': false,
           'schaeden': ['Schacht locker'],
           'keinBefund': false,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_22b_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -1137,7 +1207,7 @@ class TestdatenSeeder {
           'anschlussJa': true,
           'teller': 'nicht offen',
           'keinBefund': true,
-        }
+        },
       },
 
       {
@@ -1152,7 +1222,13 @@ class TestdatenSeeder {
           'posNr': '23',
           'art': 'Alt',
           'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'gibt es nicht'],
-          'statusVorOrt': ['zugeparkt', 'Verkehr', 'überbaut', 'zugewachsen', 'unterm Erdreich/Straße'],
+          'statusVorOrt': [
+            'zugeparkt',
+            'Verkehr',
+            'überbaut',
+            'zugewachsen',
+            'unterm Erdreich/Straße',
+          ],
           'schaeden': ['Austausch', 'Umbau auf BEGU'],
           'keinBefund': false,
           'abteilungen': ['312 IZ AR', '312 Ost', '313 TU'],
@@ -1160,8 +1236,13 @@ class TestdatenSeeder {
           'mediaFotos': ['App/L/L_Bild.png'],
           'mediaVideos': ['App/L/L_Video.mp4'],
           'mediaAudios': ['App/L/L_Audio.mp3'],
-          'mediaPdfs': ['App/L/L_Doku.pdf', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Word_Test.docx', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Excel_Test.xlsx', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/L/L_Doku.pdf',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Word_Test.docx',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_23a_LUE',
@@ -1176,7 +1257,7 @@ class TestdatenSeeder {
           'art': 'Neu',
           'kl': 'D',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_23b_LUE',
@@ -1191,7 +1272,7 @@ class TestdatenSeeder {
           'art': 'Alt',
           'schaeden': ['Umbau auf BEGU'],
           'keinBefund': false,
-        }
+        },
       },
 
       {
@@ -1208,7 +1289,12 @@ class TestdatenSeeder {
           'auspraegung': 'Normalausführung',
           'ablaufrinne': true,
           'ablaufrinneVerbindung': '9',
-          'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'Leitungsverlauf ergänzen', 'gibt es nicht'],
+          'verfuegbarkeit': [
+            'Nicht im NIS',
+            'Ergänzen',
+            'Leitungsverlauf ergänzen',
+            'gibt es nicht',
+          ],
           'statusVorOrt': [
             'zugeparkt',
             'Verkehr',
@@ -1218,7 +1304,12 @@ class TestdatenSeeder {
             'läuft augenscheinlich ab',
             'läuft augenscheinlich nicht ab',
           ],
-          'schaeden': ['Komplett', 'Rost', 'Reinigung/Nachbefahren', 'Leitung kaputt'],
+          'schaeden': [
+            'Komplett',
+            'Rost',
+            'Reinigung/Nachbefahren',
+            'Leitung kaputt',
+          ],
           'keinBefund': false,
           'abteilungen': ['312 IZ AR', '312 Ost', '313 TU'],
           'leitung': [
@@ -1229,8 +1320,13 @@ class TestdatenSeeder {
           'mediaFotos': ['App/SSK/SSK_Bild.png'],
           'mediaVideos': ['App/SSK/SSK_Video.mp4'],
           'mediaAudios': ['App/SSK/SSK_Audio.mp3'],
-          'mediaPdfs': ['App/SSK/SSK_Doku.pdf', 'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Word_Test.docx', 'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Excel_Test.xlsx', 'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/SSK/SSK_Doku.pdf',
+            'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Word_Test.docx',
+            'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/03_Strassensinkkasten/03_Strassensinkkasten_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_24a_SSK',
@@ -1247,7 +1343,7 @@ class TestdatenSeeder {
           'ablaufrinne': true,
           'ablaufrinneVerbindung': '6',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_24b_SSK',
@@ -1264,7 +1360,7 @@ class TestdatenSeeder {
           'ablaufrinne': false,
           'schaeden': ['Leitung kaputt'],
           'keinBefund': false,
-        }
+        },
       },
 
       {
@@ -1278,7 +1374,13 @@ class TestdatenSeeder {
           'wetter': 'klar',
           'posNr': '25',
           'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'gibt es nicht'],
-          'statusVorOrt': ['zugeparkt', 'Verkehr', 'überbaut', 'zugewachsen', 'unterm Erdreich/Straße'],
+          'statusVorOrt': [
+            'zugeparkt',
+            'Verkehr',
+            'überbaut',
+            'zugewachsen',
+            'unterm Erdreich/Straße',
+          ],
           'austauschErforderlich': true,
           'schaeden': ['Austausch erforderlich'],
           'keinBefund': false,
@@ -1287,8 +1389,13 @@ class TestdatenSeeder {
           'mediaFotos': ['App/SK/SK_Bild.png'],
           'mediaVideos': ['App/SK/SK_Video.mp4'],
           'mediaAudios': ['App/SK/SK_Audio.mp3'],
-          'mediaPdfs': ['App/SK/SK_Doku.pdf', 'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Word_Test.docx', 'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Excel_Test.xlsx', 'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/SK/SK_Doku.pdf',
+            'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Word_Test.docx',
+            'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/05_Schieberkappe/05_Schieberkappe_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_25a_SK',
@@ -1304,7 +1411,7 @@ class TestdatenSeeder {
           'statusVorOrt': [],
           'austauschErforderlich': false,
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_25b_SK',
@@ -1321,7 +1428,7 @@ class TestdatenSeeder {
           'austauschErforderlich': true,
           'schaeden': ['Austausch erforderlich'],
           'keinBefund': false,
-        }
+        },
       },
 
       {
@@ -1344,7 +1451,7 @@ class TestdatenSeeder {
           'mediaVideos': ['App/Kanal/Kanal_Video.mp4'],
           'mediaAudios': ['App/Kanal/Kanal_Audio.mp3'],
           'mediaPdfs': ['App/Kanal/Kanal_Doku.pdf'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_26a_KANAL',
@@ -1359,7 +1466,7 @@ class TestdatenSeeder {
           'idNr': '232602',
           'kanalprofil': 'DN 400 Eiprofil',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_26b_KANAL',
@@ -1375,7 +1482,7 @@ class TestdatenSeeder {
           'kanalprofil': 'DN 600 Maulprofil',
           'schadensdetails': 'Riss im oberen Bereich',
           'keinBefund': false,
-        }
+        },
       },
 
       {
@@ -1396,8 +1503,13 @@ class TestdatenSeeder {
           'mediaFotos': ['App/DIV/DIV_Foto.png'],
           'mediaVideos': ['App/DIV/DIV_Video.mp4'],
           'mediaAudios': ['App/DIV/DIV_Audio.mp3'],
-          'mediaPdfs': ['App/DIV/DIV_Doku.pdf', 'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Word_Test.docx', 'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Excel_Test.xlsx', 'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/DIV/DIV_Doku.pdf',
+            'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Word_Test.docx',
+            'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/06_Sonstige/06_Sonstige_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_27a_DIV',
@@ -1411,7 +1523,7 @@ class TestdatenSeeder {
           'posNr': '27a',
           'beschreibung': 'Sonderschacht',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_27b_DIV',
@@ -1426,7 +1538,7 @@ class TestdatenSeeder {
           'beschreibung': 'Sonderkonstruktion',
           'schadensdetails': 'Reinigung erforderlich',
           'keinBefund': false,
-        }
+        },
       },
 
       {
@@ -1446,9 +1558,15 @@ class TestdatenSeeder {
           'kl': 'D',
           'keinBefund': true,
           'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'gibt es nicht'],
-          'statusVorOrt': ['zugeparkt', 'Verkehr', 'überbaut', 'zugewachsen', 'unterm Erdreich/Straße'],
+          'statusVorOrt': [
+            'zugeparkt',
+            'Verkehr',
+            'überbaut',
+            'zugewachsen',
+            'unterm Erdreich/Straße',
+          ],
           'abteilungen': ['312 IZ AR', '312 Ost', '313 TU'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_28a_ES',
@@ -1465,7 +1583,7 @@ class TestdatenSeeder {
           'deckel': 'Budaplan',
           'kl': 'C',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_28b_ES',
@@ -1482,13 +1600,13 @@ class TestdatenSeeder {
           'deckel': 'Mannloch',
           'kl': 'B',
           'keinBefund': true,
-        }
+        },
       },
 
       {
         'key': 'obj_99000_Musterstrasse_1_29_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -1504,14 +1622,20 @@ class TestdatenSeeder {
           'teller': 'offen',
           'keinBefund': true,
           'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'gibt es nicht'],
-          'statusVorOrt': ['zugeparkt', 'Verkehr', 'überbaut', 'zugewachsen', 'unterm Erdreich/Straße'],
+          'statusVorOrt': [
+            'zugeparkt',
+            'Verkehr',
+            'überbaut',
+            'zugewachsen',
+            'unterm Erdreich/Straße',
+          ],
           'abteilungen': ['312 Service', '313 BauKo'],
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_29a_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -1524,12 +1648,12 @@ class TestdatenSeeder {
           'anschlussJa': false,
           'schaeden': ['Schacht locker'],
           'keinBefund': false,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_29b_VS',
         'data': {
-          'typ': 'VS',
+          'typ': 'VG',
           'evnr': '99000',
           'strasse': 'Musterstrasse 1',
           'erfasser': 'Test-Erfasser',
@@ -1543,7 +1667,7 @@ class TestdatenSeeder {
           'anschlussJa': true,
           'teller': 'nicht offen',
           'keinBefund': true,
-        }
+        },
       },
 
       {
@@ -1558,7 +1682,13 @@ class TestdatenSeeder {
           'posNr': '30',
           'art': 'Alt',
           'verfuegbarkeit': ['Nicht im NIS', 'Ergänzen', 'gibt es nicht'],
-          'statusVorOrt': ['zugeparkt', 'Verkehr', 'überbaut', 'zugewachsen', 'unterm Erdreich/Straße'],
+          'statusVorOrt': [
+            'zugeparkt',
+            'Verkehr',
+            'überbaut',
+            'zugewachsen',
+            'unterm Erdreich/Straße',
+          ],
           'schaeden': ['Austausch', 'Umbau auf BEGU'],
           'keinBefund': false,
           'abteilungen': ['312 IZ AR', '312 Ost', '313 TU'],
@@ -1566,8 +1696,13 @@ class TestdatenSeeder {
           'mediaFotos': ['App/L/L_Bild.png'],
           'mediaVideos': ['App/L/L_Video.mp4'],
           'mediaAudios': ['App/L/L_Audio.mp3'],
-          'mediaPdfs': ['App/L/L_Doku.pdf', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Word_Test.docx', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Excel_Test.xlsx', 'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_PowerPoint_Test.pptx'],
-        }
+          'mediaPdfs': [
+            'App/L/L_Doku.pdf',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Word_Test.docx',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_Excel_Test.xlsx',
+            'App/test_office_dateien_objekte/04_Lueftung/04_Lueftung_PowerPoint_Test.pptx',
+          ],
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_30a_LUE',
@@ -1582,7 +1717,7 @@ class TestdatenSeeder {
           'art': 'Neu',
           'kl': 'D',
           'keinBefund': true,
-        }
+        },
       },
       {
         'key': 'obj_99000_Musterstrasse_1_30b_LUE',
@@ -1597,15 +1732,20 @@ class TestdatenSeeder {
           'art': 'Alt',
           'schaeden': ['Umbau auf BEGU'],
           'keinBefund': false,
-        }
+        },
       },
     ];
 
     for (final entry in testEntries) {
-      await SpeicherService.upsertEntry(entry['key'] as String, entry['data'] as Map<String, dynamic>);
+      await SpeicherService.upsertEntry(
+        entry['key'] as String,
+        entry['data'] as Map<String, dynamic>,
+      );
     }
 
-    print('✓ Test-Daten erfolgreich geladen: ${testEntries.length} Positionen für EVNr 99000 / Musterstrasse 1');
+    print(
+      '✓ Test-Daten erfolgreich geladen: ${testEntries.length} Positionen für EVNr 99000 / Musterstrasse 1',
+    );
   }
 
   static Future<void> clearTestData() async {
@@ -1625,4 +1765,3 @@ class TestdatenSeeder {
     return false;
   }
 }
-

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/session_store.dart';
@@ -27,46 +26,48 @@ class SchieberScreen extends StatefulWidget {
 }
 
 class _SchieberScreenState extends State<SchieberScreen> {
-    // State für 312/313 Buttons
-    bool _show312 = false;
-    bool _show313 = false;
+  // State für 312/313 Buttons
+  bool _show312 = false;
+  bool _show313 = false;
 
-    void _toggle312() {
-      setState(() {
-        _show312 = !_show312;
-        if (_show312) {
-          _show313 = false;
-          _abteilungen.removeWhere((e) => e.startsWith('313'));
-        }
-      });
-    }
-
-    void _toggle313() {
-      setState(() {
-        _show313 = !_show313;
-        if (_show313) {
-          _show312 = false;
-          _abteilungen.removeWhere((e) => e.startsWith('312'));
-        }
-      });
-    }
-
-    void _syncAbteilungsToggles() {
-      final has312 = _abteilungen.any((e) => e.startsWith('312'));
-      final has313 = _abteilungen.any((e) => e.startsWith('313'));
-      if (has312 && !has313) {
-        _show312 = true;
+  void _toggle312() {
+    setState(() {
+      _show312 = !_show312;
+      if (_show312) {
         _show313 = false;
-      } else if (has313 && !has312) {
-        _show313 = true;
-        _show312 = false;
+        _abteilungen.removeWhere((e) => e.startsWith('313'));
       }
+    });
+  }
+
+  void _toggle313() {
+    setState(() {
+      _show313 = !_show313;
+      if (_show313) {
+        _show312 = false;
+        _abteilungen.removeWhere((e) => e.startsWith('312'));
+      }
+    });
+  }
+
+  void _syncAbteilungsToggles() {
+    final has312 = _abteilungen.any((e) => e.startsWith('312'));
+    final has313 = _abteilungen.any((e) => e.startsWith('313'));
+    if (has312 && !has313) {
+      _show312 = true;
+      _show313 = false;
+    } else if (has313 && !has312) {
+      _show313 = true;
+      _show312 = false;
     }
+  }
+
   // Kopf/Session
   SessionData? _session;
 
   bool get _isEdit {
-    final key = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final key =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     return widget.existingMeta != null && (key ?? '').isNotEmpty;
   }
 
@@ -143,12 +144,21 @@ class _SchieberScreenState extends State<SchieberScreen> {
 
     _fotos
       ..clear()
-      ..addAll(((m['mediaFotos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaFotos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _videos
       ..clear()
-      ..addAll(((m['mediaVideos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaVideos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _audios.clear();
-    final audios = (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final audios =
+        (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
     _audios.addAll(audios);
     final pdf = m['mediaPdfs'];
     if (pdf is List) _pdfs.addAll(pdf.cast<String>());
@@ -158,7 +168,10 @@ class _SchieberScreenState extends State<SchieberScreen> {
 
   Set<String> _splitSet(dynamic v) {
     if (v is List) {
-      return v.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toSet();
+      return v
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toSet();
     }
     final s = (v ?? '').toString().trim();
     if (s.isEmpty) return {};
@@ -216,9 +229,9 @@ class _SchieberScreenState extends State<SchieberScreen> {
         _audios.add(audioData);
         setState(() {});
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Audio hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Audio hinzugefügt')));
         }
       }
     }
@@ -264,10 +277,14 @@ class _SchieberScreenState extends State<SchieberScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: Text(
-                      recognizedText.isEmpty ? 'Erkannter Text wird hier angezeigt' : recognizedText,
+                      recognizedText.isEmpty
+                          ? 'Erkannter Text wird hier angezeigt'
+                          : recognizedText,
                       style: TextStyle(
                         fontSize: 14,
-                        color: recognizedText.isEmpty ? Colors.grey : Colors.black,
+                        color: recognizedText.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
                       ),
                     ),
                   ),
@@ -323,9 +340,9 @@ class _SchieberScreenState extends State<SchieberScreen> {
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Diktat hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Diktat hinzugefügt')));
         }
       }
     });
@@ -343,21 +360,32 @@ class _SchieberScreenState extends State<SchieberScreen> {
   // ----------------------------- Save -----------------------------
   Future<void> _onSave() async {
     if (_session == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+          ),
+        ),
+      );
       return;
     }
     if (!_formKey.currentState!.validate()) return;
 
     // Exklusivität: Kein Befund ↔ Schaden (Austausch)
     if (_austausch && _keinBefund) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('"Austausch erforderlich" und "Kein Befund" schließen sich aus.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '"Austausch erforderlich" und "Kein Befund" schließen sich aus.',
+          ),
+        ),
+      );
       return;
     }
 
     final pos = _posCtrl.text.trim();
-    final existingKey = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final existingKey =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     final uniqueCheck = await ValidationService.validateUniquePosition(
       evnr: _session!.evnr,
       strasse: _session!.strasse,
@@ -366,21 +394,25 @@ class _SchieberScreenState extends State<SchieberScreen> {
     );
     if (!uniqueCheck.isValid) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uniqueCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(uniqueCheck.message!)));
       return;
     }
 
     // Einheitlich: Medien-Hinweis in Bemerkung automatisch ergänzen
     var bemerkung = _bemCtrl.text.trim();
     if (_fotos.isNotEmpty || _videos.isNotEmpty) {
-      final mv = '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
+      final mv =
+          '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
       bemerkung = bemerkung.isEmpty ? mv : '$bemerkung | $mv';
     }
 
     // GPS erfassen (einmalig beim Speichern)
-    final gps = await GpsService.getCurrentLocation();
+    final gps = hasNichtImNis(_verfuegbarkeit)
+        ? ((await GpsService.getCurrentLocation()) ??
+              widget.existingMeta?['gps'])
+        : null;
 
     // Persistenz
     final idNr = _idNrCtrl.text.trim();
@@ -390,9 +422,9 @@ class _SchieberScreenState extends State<SchieberScreen> {
       required: false,
     );
     if (idValidation != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(idValidation)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(idValidation)));
       return;
     }
     final meta = {
@@ -402,6 +434,7 @@ class _SchieberScreenState extends State<SchieberScreen> {
       'erfasser': _session!.erfasser,
       'zeitIso': _session!.zeitIso,
       'wetter': _session!.wetter,
+      'temperatur': _session!.temperatur,
       'posNr': pos,
       'idNr': idNr,
       'verfuegbarkeit': _verfuegbarkeit.toList(),
@@ -426,7 +459,8 @@ class _SchieberScreenState extends State<SchieberScreen> {
         ? existingKey!
         : 'obj_${_session!.evnr}_${_session!.strasse}_${pos}_SK';
     if (_isEdit) {
-      meta['createdAt'] = widget.existingMeta?['createdAt'] ?? meta['createdAt'];
+      meta['createdAt'] =
+          widget.existingMeta?['createdAt'] ?? meta['createdAt'];
     }
     meta['storageKey'] = metaKey;
     await SpeicherService.upsertEntry(metaKey, meta);
@@ -445,8 +479,12 @@ class _SchieberScreenState extends State<SchieberScreen> {
         zeit: DateTime.now(),
         strasse: _session!.strasse,
         bemerkung: bemerkung.isEmpty ? null : bemerkung,
-        verfuegbarkeitLabel: _verfuegbarkeit.isEmpty ? null : _verfuegbarkeit.join(', '),
-        statusVorOrtLabel: _statusVorOrt.isEmpty ? null : _statusVorOrt.join(', '),
+        verfuegbarkeitLabel: _verfuegbarkeit.isEmpty
+            ? null
+            : _verfuegbarkeit.join(', '),
+        statusVorOrtLabel: _statusVorOrt.isEmpty
+            ? null
+            : _statusVorOrt.join(', '),
         notizen: null,
         spezial: null,
       );
@@ -464,11 +502,14 @@ class _SchieberScreenState extends State<SchieberScreen> {
       'EVNr': _session!.evnr,
       'Straße': _session!.strasse,
       'Erfasser:in': _session!.erfasser,
-      'Datum/Zeit': df.format(DateTime.tryParse(_session!.zeitIso) ?? DateTime.now()),
+      'Datum/Zeit': df.format(
+        DateTime.tryParse(_session!.zeitIso) ?? DateTime.now(),
+      ),
       'Wetter': _session!.wetter,
       'Positionsnummer': pos,
       if (idNr.isNotEmpty) 'ID-Nummer': idNr,
-      if (_verfuegbarkeit.isNotEmpty) 'Verfügbarkeit': _verfuegbarkeit.join(', '),
+      if (_verfuegbarkeit.isNotEmpty)
+        'Verfügbarkeit': _verfuegbarkeit.join(', '),
       if (_statusVorOrt.isNotEmpty) 'Status vor Ort': _statusVorOrt.join(', '),
       'Schaden': schaden,
       'Bemerkung': bemerkung.isEmpty ? '—' : bemerkung,
@@ -487,7 +528,11 @@ class _SchieberScreenState extends State<SchieberScreen> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Schieberkappe gespeichert (im Gesamt-Export enthalten).')),
+      const SnackBar(
+        content: Text(
+          'Schieberkappe gespeichert (im Gesamt-Export enthalten).',
+        ),
+      ),
     );
     Navigator.pop(context);
   }
@@ -495,7 +540,9 @@ class _SchieberScreenState extends State<SchieberScreen> {
   // ----------------------------- UI -----------------------------
   Future<void> _openNisPlan() async {
     final evnr = _session?.evnr ?? '';
-    final nis = evnr.trim().isNotEmpty ? await SessionStore.loadNisPlanForEvnr(evnr) : null;
+    final nis = evnr.trim().isNotEmpty
+        ? await SessionStore.loadNisPlanForEvnr(evnr)
+        : null;
     if (!mounted) return;
     final base64 = nis?.pdfBase64 ?? _session?.nisPlanPdf;
     if (base64 == null || base64.isEmpty) {
@@ -531,7 +578,7 @@ class _SchieberScreenState extends State<SchieberScreen> {
             '- Bauart, Zustand und ergänzende Angaben erfassen.\n'
             '- Medien können optional hinzugefügt werden.\n\n'
             'Hinweis:\n'
-            'Die Daten werden gespeichert, die Dateierstellung erfolgt erst im Bericht beim Export.'
+            'Die Daten werden gespeichert, die Dateierstellung erfolgt erst im Bericht beim Export.',
           ),
         ),
         actions: [
@@ -552,6 +599,7 @@ class _SchieberScreenState extends State<SchieberScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Schieberkappen (SK)'),
+        centerTitle: true,
         actions: [
           TextButton.icon(
             onPressed: _openNisPlan,
@@ -568,7 +616,11 @@ class _SchieberScreenState extends State<SchieberScreen> {
         ],
       ),
       body: s == null
-          ? const Center(child: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.'))
+          ? const Center(
+              child: Text(
+                'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+              ),
+            )
           : Form(
               key: _formKey,
               child: Column(
@@ -578,20 +630,38 @@ class _SchieberScreenState extends State<SchieberScreen> {
                     margin: const EdgeInsets.all(16),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('SK – Kopf', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 6),
-                        _kv('EVNr', s.evnr),
-                        _kv('Straße', s.strasse),
-                        _kv('Erfasser:in', s.erfasser),
-                        _kv('Datum/Zeit', df.format(DateTime.tryParse(s.zeitIso) ?? DateTime.now())),
-                        _kv('Wetter', _wIcon(s.wetter)),
-                      ]),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Erfasser Daten',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          _kv('EVNr', s.evnr),
+                          _kv('Straße', s.strasse),
+                          _kv('Erfasser:in', s.erfasser),
+                          _kv(
+                            'Datum/Zeit',
+                            df.format(
+                              DateTime.tryParse(s.zeitIso) ?? DateTime.now(),
+                            ),
+                          ),
+                          _kv('Wetter', _wIcon(s.wetter)),
+                          _kv(
+                            'Temperatur',
+                            formatTemperatureValue(s.temperatur),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ObjectGpsPanel(initialMeta: widget.existingMeta),
+                    child: ObjectGpsPanel(
+                      initialMeta: widget.existingMeta,
+                      captureEnabled: hasNichtImNis(_verfuegbarkeit),
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -617,7 +687,8 @@ class _SchieberScreenState extends State<SchieberScreen> {
                           setState(() => _currentStep--);
                         }
                       },
-                      onStepTapped: (step) => setState(() => _currentStep = step),
+                      onStepTapped: (step) =>
+                          setState(() => _currentStep = step),
                       controlsBuilder: (context, details) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 16),
@@ -625,7 +696,9 @@ class _SchieberScreenState extends State<SchieberScreen> {
                             children: [
                               FilledButton(
                                 onPressed: details.onStepContinue,
-                                child: Text(_currentStep == 2 ? 'Speichern' : 'Weiter'),
+                                child: Text(
+                                  _currentStep == 2 ? 'Speichern' : 'Weiter',
+                                ),
                               ),
                               const SizedBox(width: 12),
                               if (_currentStep > 0)
@@ -642,79 +715,94 @@ class _SchieberScreenState extends State<SchieberScreen> {
                         Step(
                           title: const Text('Basisdaten'),
                           isActive: _currentStep >= 0,
-                          state: _currentStep > 0 ? StepState.complete : StepState.indexed,
+                          state: _currentStep > 0
+                              ? StepState.complete
+                              : StepState.indexed,
                           content: ListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
+                              // PosNr
+                              _label('Positionsnummer *'),
+                              TextFormField(
+                                controller: _posCtrl,
+                                decoration: const InputDecoration(
+                                  hintText: 'z. B. 1, 1a, 2',
+                                ),
+                                validator:
+                                    ValidationService.validatePositionField,
+                              ),
 
-                  // PosNr
-                  _label('Positionsnummer *'),
-                  TextFormField(
-                    controller: _posCtrl,
-                    decoration: const InputDecoration(hintText: 'z. B. 1, 1a, 2'),
-                    validator: ValidationService.validatePositionField,
-                  ),
+                              const SizedBox(height: 12),
+                              _label('ID-Nummer (optional)'),
+                              TextField(
+                                controller: _idNrCtrl,
+                                decoration: const InputDecoration(
+                                  hintText:
+                                      '4-stellig, nur Ziffern (z. B. 1234)',
+                                  helperText: 'Optional',
+                                ),
+                              ),
 
-                  const SizedBox(height: 12),
-                  _label('ID-Nummer (optional)'),
-                  TextField(
-                    controller: _idNrCtrl,
-                    decoration: const InputDecoration(
-                      hintText: '4-stellig, nur Ziffern (z. B. 1234)',
-                      helperText: 'Optional',
-                    ),
-                  ),
+                              const SizedBox(height: 16),
+                              _sectionLabel('Verfügbarkeit'),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: kVerfuegbarkeitOptionsAll
+                                    .map(
+                                      (opt) => FilterChip(
+                                        label: Text(opt),
+                                        selected: _verfuegbarkeit.contains(opt),
+                                        onSelected: (v) => setState(() {
+                                          if (v) {
+                                            _verfuegbarkeit.add(opt);
+                                          } else {
+                                            _verfuegbarkeit.remove(opt);
+                                            if (opt == 'Ergänzen')
+                                              _verfuegbarkeitErgaenzenCtrl
+                                                  .clear();
+                                          }
+                                        }),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              if (_verfuegbarkeit.contains('Ergänzen')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _verfuegbarkeitErgaenzenCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Ergänzen - Freitext',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
 
-                  const SizedBox(height: 16),
-                  _sectionLabel('Verfügbarkeit'),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: kVerfuegbarkeitOptionsAll.map((opt) => FilterChip(
-                          label: Text(opt),
-                          selected: _verfuegbarkeit.contains(opt),
-                          onSelected: (v) => setState(() {
-                            if (v) {
-                              _verfuegbarkeit.add(opt);
-                            } else {
-                              _verfuegbarkeit.remove(opt);
-                              if (opt == 'Ergänzen') _verfuegbarkeitErgaenzenCtrl.clear();
-                            }
-                          }),
-                        )).toList(),
-                  ),
-                  if (_verfuegbarkeit.contains('Ergänzen')) ... [
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _verfuegbarkeitErgaenzenCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Ergänzen - Freitext',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 2,
-                    ),
-                  ],
-
-                  const SizedBox(height: 12),
-                  _sectionLabel('Status vor Ort'),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: kStatusAllgemein.map((opt) => FilterChip(
-                          label: Text(opt),
-                          selected: _statusVorOrt.contains(opt),
-                          onSelected: (v) => setState(() {
-                            if (v) {
-                              _statusVorOrt.add(opt);
-                            } else {
-                              _statusVorOrt.remove(opt);
-                            }
-                          }),
-                        )).toList(),
-                  ),
+                              const SizedBox(height: 12),
+                              _sectionLabel('Status vor Ort'),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: kStatusAllgemein
+                                    .map(
+                                      (opt) => FilterChip(
+                                        label: Text(opt),
+                                        selected: _statusVorOrt.contains(opt),
+                                        onSelected: (v) => setState(() {
+                                          if (v) {
+                                            _statusVorOrt.add(opt);
+                                          } else {
+                                            _statusVorOrt.remove(opt);
+                                          }
+                                        }),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
                             ],
                           ),
                         ),
@@ -723,30 +811,42 @@ class _SchieberScreenState extends State<SchieberScreen> {
                         Step(
                           title: const Text('Schäden/Abteilung'),
                           isActive: _currentStep >= 1,
-                          state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+                          state: _currentStep > 1
+                              ? StepState.complete
+                              : StepState.indexed,
                           content: ListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
                               _sectionLabel('Schäden'),
-                              Wrap(spacing: 8, children: [
-                                ChoiceChip(
-                                  label: const Text('Austausch erforderlich'),
-                                  selected: _austausch,
-                                  onSelected: (v) => setState(() {
-                                    _austausch = v;
-                                    if (v) _keinBefund = false;
-                                  }),
-                                ),
-                                ChoiceChip(
-                                  label: Text('Kein Befund', style: TextStyle(color: _keinBefund ? Colors.green : null)),
-                                  selected: _keinBefund,
-                                  onSelected: (v) => setState(() {
-                                    _keinBefund = v;
-                                    if (v) _austausch = false;
-                                  }),
-                                ),
-                              ]),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  ChoiceChip(
+                                    label: const Text('Austausch erforderlich'),
+                                    selected: _austausch,
+                                    onSelected: (v) => setState(() {
+                                      _austausch = v;
+                                      if (v) _keinBefund = false;
+                                    }),
+                                  ),
+                                  ChoiceChip(
+                                    label: Text(
+                                      'Kein Befund',
+                                      style: TextStyle(
+                                        color: _keinBefund
+                                            ? Colors.green
+                                            : null,
+                                      ),
+                                    ),
+                                    selected: _keinBefund,
+                                    onSelected: (v) => setState(() {
+                                      _keinBefund = v;
+                                      if (v) _austausch = false;
+                                    }),
+                                  ),
+                                ],
+                              ),
 
                               const SizedBox(height: 16),
                               _sectionLabel('Abteilungen'),
@@ -756,7 +856,9 @@ class _SchieberScreenState extends State<SchieberScreen> {
                                   ElevatedButton(
                                     onPressed: _toggle312,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: _show312 ? Colors.blue : null,
+                                      backgroundColor: _show312
+                                          ? Colors.blue
+                                          : null,
                                     ),
                                     child: const Text('312'),
                                   ),
@@ -764,7 +866,9 @@ class _SchieberScreenState extends State<SchieberScreen> {
                                   ElevatedButton(
                                     onPressed: _toggle313,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: _show313 ? Colors.blue : null,
+                                      backgroundColor: _show313
+                                          ? Colors.blue
+                                          : null,
                                     ),
                                     child: const Text('313'),
                                   ),
@@ -772,36 +876,58 @@ class _SchieberScreenState extends State<SchieberScreen> {
                               ),
                               if (_show312)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   child: Wrap(
                                     spacing: 8,
                                     children: [
                                       FilterChip(
                                         label: const Text('312 IZ AR'),
-                                        selected: _abteilungen.contains('312 IZ AR'),
+                                        selected: _abteilungen.contains(
+                                          '312 IZ AR',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 IZ AR') : _abteilungen.remove('312 IZ AR');
+                                          v
+                                              ? _abteilungen.add('312 IZ AR')
+                                              : _abteilungen.remove(
+                                                  '312 IZ AR',
+                                                );
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('312 Ost'),
-                                        selected: _abteilungen.contains('312 Ost'),
+                                        selected: _abteilungen.contains(
+                                          '312 Ost',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 Ost') : _abteilungen.remove('312 Ost');
+                                          v
+                                              ? _abteilungen.add('312 Ost')
+                                              : _abteilungen.remove('312 Ost');
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('312 Service'),
-                                        selected: _abteilungen.contains('312 Service'),
+                                        selected: _abteilungen.contains(
+                                          '312 Service',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 Service') : _abteilungen.remove('312 Service');
+                                          v
+                                              ? _abteilungen.add('312 Service')
+                                              : _abteilungen.remove(
+                                                  '312 Service',
+                                                );
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('312 West'),
-                                        selected: _abteilungen.contains('312 West'),
+                                        selected: _abteilungen.contains(
+                                          '312 West',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('312 West') : _abteilungen.remove('312 West');
+                                          v
+                                              ? _abteilungen.add('312 West')
+                                              : _abteilungen.remove('312 West');
                                         }),
                                       ),
                                     ],
@@ -809,29 +935,45 @@ class _SchieberScreenState extends State<SchieberScreen> {
                                 ),
                               if (_show313)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   child: Wrap(
                                     spacing: 8,
                                     children: [
                                       FilterChip(
                                         label: const Text('313 TU'),
-                                        selected: _abteilungen.contains('313 TU'),
+                                        selected: _abteilungen.contains(
+                                          '313 TU',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('313 TU') : _abteilungen.remove('313 TU');
+                                          v
+                                              ? _abteilungen.add('313 TU')
+                                              : _abteilungen.remove('313 TU');
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('313 BU'),
-                                        selected: _abteilungen.contains('313 BU'),
+                                        selected: _abteilungen.contains(
+                                          '313 BU',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('313 BU') : _abteilungen.remove('313 BU');
+                                          v
+                                              ? _abteilungen.add('313 BU')
+                                              : _abteilungen.remove('313 BU');
                                         }),
                                       ),
                                       FilterChip(
                                         label: const Text('313 BauKo'),
-                                        selected: _abteilungen.contains('313 BauKo'),
+                                        selected: _abteilungen.contains(
+                                          '313 BauKo',
+                                        ),
                                         onSelected: (v) => setState(() {
-                                          v ? _abteilungen.add('313 BauKo') : _abteilungen.remove('313 BauKo');
+                                          v
+                                              ? _abteilungen.add('313 BauKo')
+                                              : _abteilungen.remove(
+                                                  '313 BauKo',
+                                                );
                                         }),
                                       ),
                                     ],
@@ -845,16 +987,19 @@ class _SchieberScreenState extends State<SchieberScreen> {
                         Step(
                           title: const Text('Speichern'),
                           isActive: _currentStep >= 2,
-                          state: _currentStep == 2 ? StepState.indexed : StepState.indexed,
+                          state: _currentStep == 2
+                              ? StepState.indexed
+                              : StepState.indexed,
                           content: ListView(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
-
                               TextField(
                                 controller: _bemCtrl,
                                 maxLines: 2,
-                                decoration: const InputDecoration(labelText: 'Bemerkung (optional)'),
+                                decoration: const InputDecoration(
+                                  labelText: 'Bemerkung (optional)',
+                                ),
                               ),
 
                               const SizedBox(height: 16),
@@ -864,25 +1009,31 @@ class _SchieberScreenState extends State<SchieberScreen> {
                                 runSpacing: 8,
                                 children: [
                                   OutlinedButton.icon(
-                                      onPressed: _pickMedia,
-                                      icon: const Icon(Icons.image),
-                                      label: const Text('Medien')),
+                                    onPressed: _pickMedia,
+                                    icon: const Icon(Icons.image),
+                                    label: const Text('Medien'),
+                                  ),
                                   OutlinedButton.icon(
-                                      onPressed: _pickAudio,
-                                      icon: const Icon(Icons.mic),
-                                      label: const Text('Audio')),
+                                    onPressed: _pickAudio,
+                                    icon: const Icon(Icons.mic),
+                                    label: const Text('Audio'),
+                                  ),
                                   OutlinedButton.icon(
                                     onPressed: _pickFolder,
                                     icon: const Icon(Icons.folder_open),
                                     label: const Text('PDF'),
                                     style: OutlinedButton.styleFrom(
-                                      backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                                      backgroundColor: Colors.blue.withValues(
+                                        alpha: 0.1,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text('📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}'),
+                              Text(
+                                '📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}',
+                              ),
                             ],
                           ),
                         ),

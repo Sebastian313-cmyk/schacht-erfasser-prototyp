@@ -14,7 +14,11 @@ void main() {
     test('buildEinzelPdfFromMeta returns PDF bytes', () async {
       final meta = buildCurrentVsMeta();
 
-      final bytes = await ExportService.buildEinzelPdfFromMeta(meta: meta, erfasser: 'Tester', wetter: 'Sonne');
+      final bytes = await ExportService.buildEinzelPdfFromMeta(
+        meta: meta,
+        erfasser: 'Tester',
+        wetter: 'Sonne',
+      );
       expect(bytes, isNotNull);
       expect(bytes.length, greaterThan(10));
     });
@@ -35,20 +39,26 @@ void main() {
       };
 
       final fields = SpeicherService.metaToFields(meta, erfasser: 'TestErf');
-      
+
       // Debug output
       print('LÜ fields: $fields');
-      
-      expect(fields['Deckelart'], equals('Neu'), reason: 'Deckelart should be "Neu"');
+
+      expect(
+        fields['Deckelart'],
+        equals('Neu'),
+        reason: 'Deckelart should be "Neu"',
+      );
       expect(fields['Aufbau'], equals('Neu'), reason: 'Aufbau should be "Neu"');
       expect(fields['KL'], equals('D'), reason: 'KL should be "D"');
-      expect(fields.containsKey('Schäden'), isTrue, reason: 'Schäden should be in fields');
+      expect(
+        fields.containsKey('Schäden'),
+        isTrue,
+        reason: 'Schäden should be in fields',
+      );
     });
 
     test('buildGesamtPdfFromMetas creates gesamtbericht PDF', () async {
-      final metas = <Map<String, dynamic>>[
-        buildCurrentVsMeta(),
-      ];
+      final metas = <Map<String, dynamic>>[buildCurrentVsMeta()];
 
       final bytes = await ExportService.buildGesamtPdfFromMetas(
         evnr: 'E00001',
@@ -89,6 +99,18 @@ void main() {
       expect(csv, contains('"Deckel beschädigt"'));
     });
 
+    test('buildCsvFromMetas writes VG instead of VS for grube object code', () {
+      final bytes = ExportService.buildCsvFromMetas(
+        evnr: 'E00006',
+        strasse: 'Grubenstraße',
+        metas: [buildCurrentVsMeta()],
+      );
+
+      final csv = utf8.decode(bytes);
+      expect(csv, contains('"E00006";"Musterstrasse 2";"2a";"VG"'));
+      expect(csv, isNot(contains('"VS"')));
+    });
+
     test('media are properly detected in meta', () async {
       final imageData = base64Encode([1, 2, 3, 4, 5]);
       final meta = {
@@ -119,6 +141,84 @@ void main() {
       final bytes = await ExportService.buildEinzelPdfFromMeta(meta: meta);
       expect(bytes, isNotNull);
       expect(bytes.length, greaterThan(10));
+    });
+
+    test('VG metaToFields includes grube and anschluss steckbrief details', () {
+      final fields = SpeicherService.metaToFields(buildCurrentVsMeta());
+
+      expect(fields['Grubentiefe (cm)'], equals('120'));
+      expect(fields['Wasserstand (cm)'], equals('45'));
+      expect(fields['Anschluss am Kanal'], equals('Ja'));
+      expect(fields['Überlauf'], equals('offen'));
+      expect(fields['Filtersand'], equals('Ja'));
+      expect(fields['Filtersand Eigenschaften'], contains('locker'));
+      expect(fields['Filtersand Eigenschaften'], contains('sickerfaehig'));
+    });
+
+    test('VG alias is handled as sickergrube in steckbrief export', () async {
+      final meta = buildCurrentVsMeta()..['typ'] = 'VG';
+
+      final fields = SpeicherService.metaToFields(meta);
+      expect(fields['Grubentiefe (cm)'], equals('120'));
+      expect(fields['Anschluss am Kanal'], equals('Ja'));
+
+      final bytes = await ExportService.buildEinzelPdfFromMeta(meta: meta);
+      expect(bytes.length, greaterThan(10));
+    });
+
+    test('ES adds no supplemental ladder-installation text', () {
+      final meta = <String, dynamic>{
+        'typ': 'ES',
+        'evnr': 'E00007',
+        'posNr': '1',
+        'strasse': 'Teststrasse',
+        'schaeden': ['1. Steigeisen entfernen', 'Leiter einbauen'],
+        'keinBefund': false,
+        'verfuegbarkeit': <String>[],
+      };
+
+      final fields = SpeicherService.metaToFields(meta);
+      expect(
+        fields['Schäden'],
+        equals('1. Steigeisen entfernen, Leiter einbauen'),
+      );
+      expect(fields['Schäden'], isNot(contains('Leiter einbau möglich')));
+
+      final csv = utf8.decode(
+        ExportService.buildCsvFromMetas(
+          evnr: 'E00007',
+          strasse: 'Teststrasse',
+          metas: [meta],
+        ),
+      );
+      expect(csv, isNot(contains('Leiter einbau möglich')));
+    });
+
+    test('media description includes media and file counts', () {
+      final description = ExportService.mediaDescriptionFromMeta({
+        'mediaFotos': ['foto-1.jpg', 'foto-2.jpg'],
+        'mediaVideos': ['video.mp4'],
+        'mediaAudios': ['audio.mp3'],
+        'mediaPdfs': ['plan.pdf', 'liste.xlsx'],
+      });
+
+      expect(description, contains('2 Fotos'));
+      expect(description, contains('1 Video'));
+      expect(description, contains('1 Audio-Datei'));
+      expect(description, contains('1 PDF-Datei'));
+      expect(description, contains('1 Office-Datei'));
+    });
+
+    test('media bindings are not counted twice', () {
+      final description = ExportService.mediaDescriptionFromMeta({
+        'mediaFotos': ['foto.jpg'],
+        'mediaBindings': [
+          {'kind': 'foto', 'value': 'foto.jpg'},
+        ],
+      });
+
+      expect(description, contains('1 Foto'));
+      expect(description, isNot(contains('2 Fotos')));
     });
   });
 }

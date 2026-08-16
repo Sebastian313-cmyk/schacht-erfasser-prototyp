@@ -37,7 +37,9 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
   void initState() {
     super.initState();
     _currentMeta = Map<String, dynamic>.from(widget.meta);
-    _bemerkungCtrl = TextEditingController(text: _currentMeta['bemerkung'] as String? ?? '');
+    _bemerkungCtrl = TextEditingController(
+      text: _currentMeta['bemerkung'] as String? ?? '',
+    );
   }
 
   @override
@@ -144,10 +146,7 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
                   child: const Text('Abbrechen'),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _save,
-                  child: const Text('Speichern'),
-                ),
+                FilledButton(onPressed: _save, child: const Text('Speichern')),
               ],
             ),
           ],
@@ -162,9 +161,18 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
 
     final upper = value.toUpperCase();
     if (upper == 'ES' || upper.contains('EINSTIEG')) return 'ES';
-    if (upper == 'VS' || upper.contains('SICKERGRUBE') || upper.contains('GRUBE')) return 'VS';
+    if (upper == 'VS' ||
+        upper == 'VG' ||
+        upper == 'G' ||
+        upper.contains('SICKERGRUBE') ||
+        upper.contains('GRUBE')) {
+      return 'VG';
+    }
     if (upper == 'SSK' || upper.contains('SINKKASTEN')) return 'SSK';
-    if (upper == 'LÜ' || upper == 'LUE' || upper.contains('LUEFTUNG') || upper.contains('LÜFTUNG')) {
+    if (upper == 'LÜ' ||
+        upper == 'LUE' ||
+        upper.contains('LUEFTUNG') ||
+        upper.contains('LÜFTUNG')) {
       return 'LÜ';
     }
     if (upper == 'SK' || upper.contains('SCHIEBER')) return 'SK';
@@ -205,7 +213,8 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
   }
 
   Widget _buildField(String label, String? value) {
-    if (value == null || value.isEmpty || value == '—') return const SizedBox.shrink();
+    if (value == null || value.isEmpty || value == '—')
+      return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: RichText(
@@ -214,7 +223,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           children: [
             TextSpan(
               text: '$label: ',
-              style: const TextStyle(fontSize: _fontField, fontWeight: FontWeight.w700, color: Colors.black87),
+              style: const TextStyle(
+                fontSize: _fontField,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
             ),
             TextSpan(text: value),
           ],
@@ -249,11 +262,19 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           children: [
             const TextSpan(
               text: 'Schäden: ',
-              style: TextStyle(fontSize: _fontField, fontWeight: FontWeight.w700, color: Colors.black87),
+              style: TextStyle(
+                fontSize: _fontField,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
             ),
             const TextSpan(
               text: '✓ Kein Befund',
-              style: TextStyle(fontSize: _fontField, color: Colors.green, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: _fontField,
+                color: Colors.green,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -268,10 +289,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
       case 'SSK':
         {
           final keinBefund = _currentMeta['keinBefund'] == true;
-            final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)
-                ?.map((e) => e.toString().trim())
-                .where((e) => e.isNotEmpty)
-                .toList() ??
+          final schaeden =
+              (_currentMeta['schaeden'] as List<dynamic>?)
+                  ?.map((e) => e.toString().trim())
+                  .where((e) => e.isNotEmpty)
+                  .toList() ??
               const <String>[];
           final abteilungenText = _getAbteilungenText(_currentMeta);
 
@@ -283,24 +305,39 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
               _buildBulletSection('Schäden', schaeden),
             _buildField('Abteilungen', abteilungenText),
             // Nach Schäden: spezifische Leitungsschäden mit Meterangaben anzeigen
-            _buildField('Leitung kaputt', _buildLeitungKaputtSummary(_currentMeta)),
-            _buildField('Ablaufrinne', _currentMeta['ablaufrinne'] == true ? 'Ja' : null),
-            if (_currentMeta['ablaufrinne'] == true && (_currentMeta['ablaufrinneVerbindung'] as String?)?.isNotEmpty == true)
-              _buildField('Ablaufrinne Verbindung', _currentMeta['ablaufrinneVerbindung']),
+            _buildField(
+              'Leitung kaputt',
+              _buildLeitungKaputtSummary(_currentMeta),
+            ),
+            _buildField(
+              'Ablaufrinne',
+              _currentMeta['ablaufrinne'] == true ? 'Ja' : null,
+            ),
+            if (_currentMeta['ablaufrinne'] == true &&
+                (_currentMeta['ablaufrinneVerbindung'] as String?)
+                        ?.isNotEmpty ==
+                    true)
+              _buildField(
+                'Ablaufrinne Verbindung',
+                _currentMeta['ablaufrinneVerbindung'],
+              ),
           ]);
         }
         break;
 
       case 'ES':
-        final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)
-            ?.map((e) => e.toString().trim())
-            .where((e) => e.isNotEmpty)
-            .toList() ??
-          const <String>[];
+        final schaeden =
+            (_currentMeta['schaeden'] as List<dynamic>?)
+                ?.map((e) => e.toString().trim())
+                .where((e) => e.isNotEmpty)
+                .toList() ??
+            const <String>[];
         final rfActive = schaeden.contains('Keine Rückenfreiheit');
         final einsteigart = _currentMeta['einsteigart'] as String?;
         final steigeisenStand = _currentMeta['steigeisenStand'] as String?;
-        final einsteigartDisplay = (einsteigart == 'Steigeisen' && (steigeisenStand?.isNotEmpty ?? false))
+        final einsteigartDisplay =
+            (einsteigart == 'Steigeisen' &&
+                (steigeisenStand?.isNotEmpty ?? false))
             ? 'Steigeisen – $steigeisenStand'
             : einsteigart;
 
@@ -317,7 +354,10 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
             else
               _buildBulletSection('Schäden', schaeden),
             _buildField('Abteilungen', abteilungenText),
-            _buildField('Schacht Durchmesser', _appendCm(_currentMeta['durchmesser'])),
+            _buildField(
+              'Schacht Durchmesser',
+              _appendCm(_currentMeta['durchmesser']),
+            ),
             _buildField('Kanalprofil', _currentMeta['kanalprofil'] as String?),
           ]);
         }
@@ -325,49 +365,74 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         // ---- RF-abhängige Zusatzdaten ----
         if (rfActive) {
           fields.add(const SizedBox(height: 12));
-          fields.add(Text('Maße (cm)', style: Theme.of(context).textTheme.titleSmall));
+          fields.add(
+            Text('Maße (cm)', style: Theme.of(context).textTheme.titleSmall),
+          );
 
           fields.addAll([
             _buildField(
               '1. Steigeisen',
-              _pairCm(
-                _currentMeta['st1Hoehe'],
-                _currentMeta['st1Rf'],
-              ),
+              _pairCm(_currentMeta['st1Hoehe'], _currentMeta['st1Rf']),
             ),
             _buildField(
               '2. Steigeisen',
-              _pairCm(
-                _currentMeta['st2Hoehe'],
-                _currentMeta['st2Rf'],
-              ),
+              _pairCm(_currentMeta['st2Hoehe'], _currentMeta['st2Rf']),
             ),
-            _buildField('815 (cm)', _appendCm(_currentMeta['mAusgleich'])),
-            _buildField('Konusanfang (cm)', _appendCm(_currentMeta['mKonusAnf'])),
+            _buildField(
+              'Konusanfang (cm)',
+              _appendCm(_currentMeta['mKonusAnf']),
+            ),
             _buildField('Konusende (cm)', _appendCm(_currentMeta['mKonusEnd'])),
             _buildField('Berme (cm)', _appendCm(_currentMeta['mBerme'])),
-            _buildField('Solltiefe (cm)', _appendCm(_currentMeta['mSolltiefe'])),
+            _buildField(
+              'Solltiefe (cm)',
+              _appendCm(_currentMeta['mSolltiefe']),
+            ),
           ]);
 
           fields.add(const SizedBox(height: 12));
-          fields.add(Text('Örtlichkeit / Oberfläche / Schachtkopf',
-              style: Theme.of(context).textTheme.titleSmall));
+          fields.add(
+            Text(
+              'Örtlichkeit / Oberfläche / Schachtkopf',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          );
 
           fields.addAll([
             _buildField('Örtlichkeit', _currentMeta['oertlichkeit'] as String?),
-            _buildField('Örtlichkeit – Bem.', _currentMeta['oertlBem'] as String?),
-            _buildField('Oberflächenart', _currentMeta['oberflaeche'] as String?),
-            _buildField('Oberfläche – Bem.', _currentMeta['obflBem'] as String?),
-            _buildField('Schachtkopfdaten', _currentMeta['schachtkopf'] as String?),
-            _buildField('Übergangsplatte', _appendCm(_currentMeta['uebergangsBem'])),
+            _buildField(
+              'Örtlichkeit – Bem.',
+              _currentMeta['oertlBem'] as String?,
+            ),
+            _buildField(
+              'Oberflächenart',
+              _currentMeta['oberflaeche'] as String?,
+            ),
+            _buildField(
+              'Oberfläche – Bem.',
+              _currentMeta['obflBem'] as String?,
+            ),
+            _buildField(
+              'Schachtkopfdaten',
+              _currentMeta['schachtkopf'] as String?,
+            ),
+            _buildField(
+              'Übergangsplatte',
+              _appendCm(_currentMeta['uebergangsBem']),
+            ),
           ]);
         }
         break;
 
+      case 'VG':
       case 'VS':
         {
           final keinBefund = _currentMeta['keinBefund'] == true;
-          final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const <String>[];
+          final schaeden =
+              (_currentMeta['schaeden'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              const <String>[];
           final abteilungenText = _getAbteilungenText(_currentMeta);
           fields.addAll([
             _buildField('Grubentyp', _currentMeta['grubentyp'] as String?),
@@ -383,10 +448,14 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         break;
 
       case 'LÜ':
-        final art = (_currentMeta['art'] as String?) ?? (_currentMeta['typ_detail'] as String?);
+        final art =
+            (_currentMeta['art'] as String?) ??
+            (_currentMeta['typ_detail'] as String?);
+        final deckel = (_currentMeta['deckel'] as String?)?.trim();
         final kl = (_currentMeta['kl'] as String?)?.trim();
         final keinBefund = _currentMeta['keinBefund'] == true;
-        final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)
+        final schaeden =
+            (_currentMeta['schaeden'] as List<dynamic>?)
                 ?.map((e) => e.toString().trim())
                 .where((e) => e.isNotEmpty)
                 .toList() ??
@@ -394,7 +463,10 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         final abteilungenText = _getAbteilungenText(_currentMeta);
 
         fields.addAll([
-          _buildField('Deckelart', art),
+          _buildField(
+            'Deckelart',
+            deckel == null || deckel.isEmpty ? art : deckel,
+          ),
           _buildField('Aufbau', art),
           _buildField('KL', kl),
           if (keinBefund)
@@ -406,7 +478,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         break;
 
       case 'SK':
-        final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+        final schaeden =
+            (_currentMeta['schaeden'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [];
         final keinBefund = _currentMeta['keinBefund'] == true;
         final abteilungenText = _getAbteilungenText(_currentMeta);
         fields.addAll([
@@ -422,10 +498,15 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
 
       case 'KANAL':
         {
-          final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const <String>[];
+          final schaeden =
+              (_currentMeta['schaeden'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              const <String>[];
           final keinBefund = _currentMeta['keinBefund'] == true;
           final abteilungenText = _getAbteilungenText(_currentMeta);
-          final schadensdetails = (_currentMeta['schadensdetails'] as String?)?.trim();
+          final schadensdetails = (_currentMeta['schadensdetails'] as String?)
+              ?.trim();
           fields.addAll([
             _buildField('ID-Nummer', _currentMeta['idNr'] as String?),
             _buildField('Kanalprofil', _currentMeta['kanalprofil'] as String?),
@@ -433,7 +514,10 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
               _buildKeinBefundField()
             else if (schaeden.isNotEmpty)
               _buildBulletSection('Schäden', schaeden),
-            _buildField('Schadensdetails', (keinBefund == true) ? null : schadensdetails),
+            _buildField(
+              'Schadensdetails',
+              (keinBefund == true) ? null : schadensdetails,
+            ),
             _buildField('Abteilungen', abteilungenText),
           ]);
         }
@@ -441,18 +525,29 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
 
       case 'DIV':
         {
-          final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const <String>[];
+          final schaeden =
+              (_currentMeta['schaeden'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              const <String>[];
           final keinBefund = _currentMeta['keinBefund'] == true;
-          final schadensdetails = (_currentMeta['schadensdetails'] as String?)?.trim();
+          final schadensdetails = (_currentMeta['schadensdetails'] as String?)
+              ?.trim();
           final abteilungenText = _getAbteilungenText(_currentMeta);
           fields.addAll([
             _buildField('Titel', _currentMeta['titel'] as String?),
-            _buildField('Beschreibung', _currentMeta['beschreibung'] as String?),
+            _buildField(
+              'Beschreibung',
+              _currentMeta['beschreibung'] as String?,
+            ),
             if (keinBefund)
               _buildKeinBefundField()
             else if (schaeden.isNotEmpty)
               _buildBulletSection('Schäden', schaeden),
-            _buildField('Schadensdetails', (keinBefund == true) ? null : schadensdetails),
+            _buildField(
+              'Schadensdetails',
+              (keinBefund == true) ? null : schadensdetails,
+            ),
             _buildField('Abteilungen', abteilungenText),
           ]);
         }
@@ -473,6 +568,7 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     switch (typ) {
       case 'ES':
         return 'Einstiegschacht';
+      case 'VG':
       case 'VS':
         return 'Sickergrube';
       case 'SSK':
@@ -488,13 +584,19 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     }
   }
 
-  Widget _buildStandardSteckbrief(String typ, List<String> fotos, List<String> videos, List<String> audios) {
+  Widget _buildStandardSteckbrief(
+    String typ,
+    List<String> fotos,
+    List<String> videos,
+    List<String> audios,
+  ) {
     final posNr = _currentMeta['posNr'] as String? ?? '—';
     final idNr = _currentMeta['idNr'] as String? ?? '—';
     final erfasser = _currentMeta['erfasser'] as String?;
     final abteilungen = _getAbteilungenText(_currentMeta);
     final keinBefund = _currentMeta['keinBefund'] == true;
-    final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)
+    final schaeden =
+        (_currentMeta['schaeden'] as List<dynamic>?)
             ?.map((e) => e.toString().trim())
             .where((e) => e.isNotEmpty)
             .toList() ??
@@ -514,28 +616,63 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     }
 
     final aufbau = <Widget>[];
+    final grubenDaten = <Widget>[];
     switch (typ) {
+      case 'VG':
       case 'VS':
+        final anschlussText =
+            _boolToJaNein(_currentMeta['anschlussJa']) ??
+            _boolToJaNein(_currentMeta['anschluss']);
+        final filtersandText =
+            _boolToJaNein(_currentMeta['filtersandJa']) ??
+            _boolToJaNein(_currentMeta['filtersand']);
         aufbau.addAll([
-          _buildField('Grubentyp', (_currentMeta['grubentyp'] as String?) ?? (_currentMeta['grubenart'] as String?)),
+          _buildField(
+            'Grubentyp',
+            (_currentMeta['grubentyp'] as String?) ??
+                (_currentMeta['grubenart'] as String?),
+          ),
           _buildField('Deckelart', _currentMeta['deckel'] as String?),
           _buildField('KL', _currentMeta['kl'] as String?),
-          _buildField('Tiefe', _joinNonEmpty([
-            _appendCm(_currentMeta['tiefe_m']),
-            _appendCm(_currentMeta['tiefe_cm']),
-          ], separator: ' / ')),
+          _buildField('Grubentiefe (cm)', _plainText(_currentMeta['tiefe_cm'])),
+          _buildField('Grubentiefe (m)', _plainText(_currentMeta['tiefe_m'])),
+        ]);
+        grubenDaten.addAll([
+          _buildField(
+            'Wasserstand (cm)',
+            _plainText(_currentMeta['wasser_cm']),
+          ),
+          _buildField('Wasserstand (m)', _plainText(_currentMeta['wasser_m'])),
+          _buildField('Anschluss am Kanal', anschlussText),
+          _buildField('Überlauf', _plainText(_currentMeta['teller'])),
+          _buildField('Filtersand', filtersandText),
+          _buildField(
+            'Filtersand Eigenschaften',
+            _getListOrString(_currentMeta['filtersandEigensch']),
+          ),
+          _buildField('Baujahr', _plainText(_currentMeta['baujahr'])),
         ]);
         break;
       case 'SSK':
         aufbau.addAll([
           _buildField('Deckelart', _deckelartFromMeta(_currentMeta)),
-          _buildField('Ablaufrinne', _currentMeta['ablaufrinne'] == true ? 'Ja' : null),
-          _buildField('Ablaufrinne Verbindung', _currentMeta['ablaufrinneVerbindung'] as String?),
+          _buildField(
+            'Ablaufrinne',
+            _currentMeta['ablaufrinne'] == true ? 'Ja' : null,
+          ),
+          _buildField(
+            'Ablaufrinne Verbindung',
+            _currentMeta['ablaufrinneVerbindung'] as String?,
+          ),
         ]);
         break;
       case 'LÜ':
         aufbau.addAll([
-          _buildField('Art', (_currentMeta['art'] as String?) ?? (_currentMeta['typ_detail'] as String?)),
+          _buildField(
+            'Art',
+            (_currentMeta['art'] as String?) ??
+                (_currentMeta['typ_detail'] as String?),
+          ),
           _buildField('KL', _currentMeta['kl'] as String?),
         ]);
         break;
@@ -552,10 +689,7 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         ]);
         break;
       case 'DIV':
-        aufbau.addAll([
-          _buildField('Titel', _currentMeta['titel'] as String?),
-          _buildField('Beschreibung', _currentMeta['beschreibung'] as String?),
-        ]);
+        aufbau.addAll([_buildField('Titel', _currentMeta['titel'] as String?)]);
         break;
     }
 
@@ -569,36 +703,60 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           _buildField('Erfasser', erfasser),
           _buildField('GPS Breitengrad', gpsLat),
           _buildField('GPS Längengrad', gpsLon),
+          _buildField('Beschreibung', _steckbriefDescription()),
         ]),
         _buildSection('Status vor Ort', [
-          _buildField('Verfügbarkeit', _getListOrString(_currentMeta['verfuegbarkeit'])),
-          _buildField('Status vor Ort', _getListOrString(_currentMeta['statusVorOrt'])),
+          _buildField(
+            'Verfügbarkeit',
+            _getListOrString(_currentMeta['verfuegbarkeit']),
+          ),
+          _buildField(
+            'Status vor Ort',
+            _getListOrString(_currentMeta['statusVorOrt']),
+          ),
           _buildField('Abteilung', abteilungen),
         ]),
         _buildSection('Aufbau', aufbau),
+        _buildSection('Grubendaten / Anschluss', grubenDaten),
         _buildSection('Schäden / Maßnahmen', [
-          if (keinBefund) _buildKeinBefundField() else _buildBulletSection('Schäden', schaeden),
-          _buildField('Bemerkung', _getFirstNonEmptyString([
-            _currentMeta['bemerkung'] as String?,
-            _currentMeta['schadensdetails'] as String?,
-          ])),
+          if (keinBefund)
+            _buildKeinBefundField()
+          else
+            _buildBulletSection('Schäden', schaeden),
+          _buildField(
+            'Bemerkung',
+            _getFirstNonEmptyString([
+              _currentMeta['bemerkung'] as String?,
+              _currentMeta['schadensdetails'] as String?,
+            ]),
+          ),
         ]),
         _buildSection('Lage / Örtlichkeit', [
           _buildField('Örtlichkeit', _currentMeta['oertlichkeit'] as String?),
-          _buildField('Bemerkung Örtlichkeit', _currentMeta['oertlBem'] as String?),
+          _buildField(
+            'Bemerkung Örtlichkeit',
+            _currentMeta['oertlBem'] as String?,
+          ),
         ]),
         _buildSection('Oberfläche / Umfeld', [
           _buildField('Oberflächenart', _currentMeta['oberflaeche'] as String?),
-          _buildField('Bemerkung Oberfläche', _currentMeta['obflBem'] as String?),
+          _buildField(
+            'Bemerkung Oberfläche',
+            _currentMeta['obflBem'] as String?,
+          ),
         ]),
         _buildSection('Schachtmasse / Einstieg', [
           _buildField('Konusanfang (cm)', _appendCm(_currentMeta['mKonusAnf'])),
-          _buildField('815 (cm)', _appendCm(_currentMeta['mAusgleich'])),
           _buildField('Konusende (cm)', _appendCm(_currentMeta['mKonusEnd'])),
           _buildField('Berme (cm)', _appendCm(_currentMeta['mBerme'])),
           _buildField('Solltiefe (cm)', _appendCm(_currentMeta['mSolltiefe'])),
         ]),
-        _buildMediaSection('Medien / Anhänge', fotos: fotos, videos: videos, audios: audios),
+        _buildMediaSection(
+          'Medien / Anhänge',
+          fotos: fotos,
+          videos: videos,
+          audios: audios,
+        ),
       ],
     );
   }
@@ -609,7 +767,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     required List<String> videos,
     required List<String> audios,
   }) {
-    final allRefs = _collectAllAttachmentRefs(fotos: fotos, videos: videos, audios: audios);
+    final allRefs = _collectAllAttachmentRefs(
+      fotos: fotos,
+      videos: videos,
+      audios: audios,
+    );
     final hints = _bindingKindHints();
 
     final groups = <String, List<String>>{
@@ -629,14 +791,56 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     }
 
     final mediaChildren = <Widget>[
-      _buildAttachmentGroup('Fotos', groups['photo']!, kind: 'image', icon: Icons.image, showPreviews: true),
-      _buildAttachmentGroup('Videos', groups['video']!, kind: 'video', icon: Icons.videocam, showPreviews: true),
-      _buildAttachmentGroup('Audio-Dateien', groups['audio']!, kind: 'audio', icon: Icons.audiotrack),
-      _buildAttachmentGroup('PDF-Dateien', groups['pdf']!, kind: 'pdf', icon: Icons.picture_as_pdf),
-      _buildAttachmentGroup('Word-Dateien', groups['word']!, kind: 'document', icon: Icons.description),
-      _buildAttachmentGroup('Excel-Dateien', groups['excel']!, kind: 'document', icon: Icons.table_chart),
-      _buildAttachmentGroup('PowerPoint-Dateien', groups['powerpoint']!, kind: 'document', icon: Icons.slideshow),
-      _buildAttachmentGroup('Sonstige Dateien', groups['other']!, kind: 'document', icon: Icons.insert_drive_file),
+      _buildAttachmentGroup(
+        'Fotos',
+        groups['photo']!,
+        kind: 'image',
+        icon: Icons.image,
+        showPreviews: true,
+      ),
+      _buildAttachmentGroup(
+        'Videos',
+        groups['video']!,
+        kind: 'video',
+        icon: Icons.videocam,
+        showPreviews: true,
+      ),
+      _buildAttachmentGroup(
+        'Audio-Dateien',
+        groups['audio']!,
+        kind: 'audio',
+        icon: Icons.audiotrack,
+      ),
+      _buildAttachmentGroup(
+        'PDF-Dateien',
+        groups['pdf']!,
+        kind: 'pdf',
+        icon: Icons.picture_as_pdf,
+      ),
+      _buildAttachmentGroup(
+        'Word-Dateien',
+        groups['word']!,
+        kind: 'document',
+        icon: Icons.description,
+      ),
+      _buildAttachmentGroup(
+        'Excel-Dateien',
+        groups['excel']!,
+        kind: 'document',
+        icon: Icons.table_chart,
+      ),
+      _buildAttachmentGroup(
+        'PowerPoint-Dateien',
+        groups['powerpoint']!,
+        kind: 'document',
+        icon: Icons.slideshow,
+      ),
+      _buildAttachmentGroup(
+        'Sonstige Dateien',
+        groups['other']!,
+        kind: 'document',
+        icon: Icons.insert_drive_file,
+      ),
     ];
 
     return _buildSection(title, mediaChildren);
@@ -661,12 +865,18 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: refs.map((ref) => _buildMediaThumbnail(ref, kind == 'image')).toList(),
+              children: refs
+                  .map((ref) => _buildMediaThumbnail(ref, kind == 'image'))
+                  .toList(),
             ),
           if (showPreviews) const SizedBox(height: 4),
           ...refs.asMap().entries.map((entry) {
             final ref = entry.value;
-            final fileName = _fileNameFromRef(ref, fallbackIndex: entry.key + 1, kind: kind);
+            final fileName = _fileNameFromRef(
+              ref,
+              fallbackIndex: entry.key + 1,
+              kind: kind,
+            );
             final rowKind = _detectAttachmentKind(ref);
             return _buildAttachmentRow(
               ref: ref,
@@ -690,7 +900,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           const SizedBox(width: 6),
           Text(
             '$label: $count',
-            style: const TextStyle(fontSize: _fontField, fontWeight: FontWeight.w700, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: _fontField,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
           ),
         ],
       ),
@@ -712,7 +926,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Row(
             children: [
-              Icon(_iconForKind(kindForIcon), size: 16, color: _colorForKind(kindForIcon)),
+              Icon(
+                _iconForKind(kindForIcon),
+                size: 16,
+                color: _colorForKind(kindForIcon),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Row(
@@ -720,7 +938,10 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
                     Expanded(
                       child: Text(
                         '${_shortText(fileName, 44)} öffnen',
-                        style: const TextStyle(fontSize: _fontField, color: Colors.black87),
+                        style: const TextStyle(
+                          fontSize: _fontField,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -729,7 +950,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.open_in_new, size: 14, color: Colors.blueGrey.shade700),
+              Icon(
+                Icons.open_in_new,
+                size: 14,
+                color: Colors.blueGrey.shade700,
+              ),
             ],
           ),
         ),
@@ -755,7 +980,9 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     if (bindings is List) {
       for (final item in bindings) {
         if (item is! Map) continue;
-        final value = (item['value'] ?? item['name'] ?? item['fileName'] ?? '').toString().trim();
+        final value = (item['value'] ?? item['name'] ?? item['fileName'] ?? '')
+            .toString()
+            .trim();
         if (value.isNotEmpty) refs.add(value);
       }
     }
@@ -776,7 +1003,9 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
 
     for (final item in bindings) {
       if (item is! Map) continue;
-      final value = (item['value'] ?? item['name'] ?? item['fileName'] ?? '').toString().trim();
+      final value = (item['value'] ?? item['name'] ?? item['fileName'] ?? '')
+          .toString()
+          .trim();
       if (value.isEmpty) continue;
       final kind = (item['kind'] ?? '').toString().trim().toLowerCase();
       if (kind.isNotEmpty) hints[value] = kind;
@@ -797,14 +1026,19 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
       if (lower.startsWith('data:video/')) return 'video';
       if (lower.startsWith('data:audio/')) return 'audio';
       if (lower.startsWith('data:application/pdf')) return 'pdf';
-      if (lower.contains('wordprocessingml') || lower.contains('msword')) return 'word';
-      if (lower.contains('spreadsheetml') || lower.contains('excel')) return 'excel';
-      if (lower.contains('presentationml') || lower.contains('powerpoint')) return 'powerpoint';
+      if (lower.contains('wordprocessingml') || lower.contains('msword'))
+        return 'word';
+      if (lower.contains('spreadsheetml') || lower.contains('excel'))
+        return 'excel';
+      if (lower.contains('presentationml') || lower.contains('powerpoint'))
+        return 'powerpoint';
       return 'other';
     }
 
-    final ext = RegExp(r'\.([a-z0-9]+)(?:\?|#|$)').firstMatch(lower)?.group(1) ?? '';
-    if (const {'jpg', 'jpeg', 'png', 'webp', 'heic'}.contains(ext)) return 'photo';
+    final ext =
+        RegExp(r'\.([a-z0-9]+)(?:\?|#|$)').firstMatch(lower)?.group(1) ?? '';
+    if (const {'jpg', 'jpeg', 'png', 'webp', 'heic'}.contains(ext))
+      return 'photo';
     if (const {'mp4', 'mov', 'avi', 'mkv'}.contains(ext)) return 'video';
     if (const {'mp3', 'wav', 'm4a', 'aac'}.contains(ext)) return 'audio';
     if (ext == 'pdf') return 'pdf';
@@ -899,15 +1133,26 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     }
   }
 
-  String _fileNameFromRef(String ref, {required int fallbackIndex, required String kind}) {
-    final normalized = ref.split('?').first.split('#').first.replaceAll('\\', '/').trim();
+  String _fileNameFromRef(
+    String ref, {
+    required int fallbackIndex,
+    required String kind,
+  }) {
+    final normalized = ref
+        .split('?')
+        .first
+        .split('#')
+        .first
+        .replaceAll('\\', '/')
+        .trim();
     if (normalized.isNotEmpty && !normalized.startsWith('data:')) {
       final name = normalized.split('/').last.trim();
       if (name.isNotEmpty) return name;
     }
 
     if (normalized.startsWith('data:')) {
-      final mime = RegExp(r'^data:([^;,]+)').firstMatch(normalized)?.group(1) ?? '';
+      final mime =
+          RegExp(r'^data:([^;,]+)').firstMatch(normalized)?.group(1) ?? '';
       final ext = _extFromMime(mime, kind: kind);
       return 'Anhang_$fallbackIndex.$ext';
     }
@@ -977,10 +1222,12 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
       return;
     }
 
-    final uriValue = value.startsWith('http') || value.startsWith('data:') ? value : _resolveWebSrc(value);
+    final uriValue = value.startsWith('http') || value.startsWith('data:')
+        ? value
+        : _resolveWebSrc(value);
     final uri = (uriValue.startsWith('http') || uriValue.startsWith('data:'))
-      ? Uri.tryParse(uriValue)
-      : Uri.base.resolveUri(Uri.parse(uriValue));
+        ? Uri.tryParse(uriValue)
+        : Uri.base.resolveUri(Uri.parse(uriValue));
     if (uri == null) return;
 
     var opened = await launchUrl(uri, mode: LaunchMode.platformDefault);
@@ -999,7 +1246,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     }
   }
 
-  Widget _buildEsSteckbrief(List<String> fotos, List<String> videos, List<String> audios) {
+  Widget _buildEsSteckbrief(
+    List<String> fotos,
+    List<String> videos,
+    List<String> audios,
+  ) {
     final posNr = _currentMeta['posNr'] as String? ?? '—';
     final idNr = _currentMeta['idNr'] as String? ?? '—';
     final erfasser = _currentMeta['erfasser'] as String?;
@@ -1017,13 +1268,19 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     final eingangsart = _currentMeta['eingang'] as String?;
     final einsteigart = _currentMeta['einsteigart'] as String?;
     final steigeisenStand = _currentMeta['steigeisenStand'] as String?;
-    final einsteigartDisplay = (einsteigart == 'Steigeisen' && (steigeisenStand?.isNotEmpty ?? false))
+    final einsteigartDisplay =
+        (einsteigart == 'Steigeisen' && (steigeisenStand?.isNotEmpty ?? false))
         ? 'Steigeisen ${steigeisenStand!.toLowerCase()}'
         : einsteigart;
     final kl = _currentMeta['kl'] as String?;
     final verfu = _getListOrString(_currentMeta['verfuegbarkeit']);
     final status = _getListOrString(_currentMeta['statusVorOrt']);
-          final schaeden = (_currentMeta['schaeden'] as List<dynamic>?)?.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList() ?? const <String>[];
+    final schaeden =
+        (_currentMeta['schaeden'] as List<dynamic>?)
+            ?.map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList() ??
+        const <String>[];
     final keinBefund = _currentMeta['keinBefund'] == true;
     final oertlichkeit = _currentMeta['oertlichkeit'] as String?;
     final oertlBem = _currentMeta['oertlBem'] as String?;
@@ -1044,17 +1301,31 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
       } catch (_) {}
     }
 
-    final st1Hoehe = _currentMeta['st1Hoehe'] ?? _currentMeta['steighoehe_1_steigeisen'];
-    final st1Rf = _currentMeta['st1Rf'] ?? _currentMeta['rueckenfreiheit_1_steigeisen'];
-    final st2Hoehe = _currentMeta['st2Hoehe'] ?? _currentMeta['steighoehe_2_steigeisen'];
-    final st2Rf = _currentMeta['st2Rf'] ?? _currentMeta['rueckenfreiheit_2_steigeisen'];
+    final st1Hoehe =
+        _currentMeta['st1Hoehe'] ?? _currentMeta['steighoehe_1_steigeisen'];
+    final st1Rf =
+        _currentMeta['st1Rf'] ?? _currentMeta['rueckenfreiheit_1_steigeisen'];
+    final st2Hoehe =
+        _currentMeta['st2Hoehe'] ?? _currentMeta['steighoehe_2_steigeisen'];
+    final st2Rf =
+        _currentMeta['st2Rf'] ?? _currentMeta['rueckenfreiheit_2_steigeisen'];
     final konusAnf = _currentMeta['mKonusAnf'] ?? _currentMeta['konusanfang'];
-    final mass815 = _currentMeta['mAusgleich'] ?? _currentMeta['mass_815'];
     final konusEnd = _currentMeta['mKonusEnd'] ?? _currentMeta['konusende'];
     final berme = _currentMeta['mBerme'] ?? _currentMeta['berme'];
     final solltiefe = _currentMeta['mSolltiefe'] ?? _currentMeta['solltiefe'];
+    final rfActive =
+        schaeden.contains('Keine Rückenfreiheit') ||
+        _hasText(st1Hoehe) ||
+        _hasText(st1Rf) ||
+        _hasText(st2Hoehe) ||
+        _hasText(st2Rf) ||
+        _hasText(konusAnf) ||
+        _hasText(konusEnd) ||
+        _hasText(berme) ||
+        _hasText(solltiefe);
 
-    Widget section(String title, List<Widget> children) => _buildSection(title, children);
+    Widget section(String title, List<Widget> children) =>
+        _buildSection(title, children);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1066,6 +1337,7 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           _buildField('Erfasser', erfasser),
           _buildField('GPS Breitengrad', gpsLat),
           _buildField('GPS Längengrad', gpsLon),
+          _buildField('Beschreibung', _steckbriefDescription()),
         ]),
         const SizedBox(height: 16),
         section('Status vor Ort', [
@@ -1079,17 +1351,29 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           _buildField('Deckelart', deckel),
           _buildField('KL', kl),
           _buildField('Schachtkopfart', schachtkopf),
-          _buildField('Objektaufbau', _joinNonEmpty([
-            eingangsart,
-            einsteigartDisplay,
-            deckel,
-            kl == null || kl.trim().isEmpty ? null : 'KL $kl',
-            schachtkopf,
-          ])),
+          _buildField(
+            'Objektaufbau',
+            _joinNonEmpty([
+              eingangsart,
+              einsteigartDisplay,
+              deckel,
+              kl == null || kl.trim().isEmpty ? null : 'KL $kl',
+              schachtkopf,
+            ]),
+          ),
         ]),
         section('Schäden / Maßnahmen', [
-          if (keinBefund) _buildKeinBefundField() else _buildBulletSection('Schäden', schaeden),
-          _buildField('Bemerkung', _getFirstNonEmptyString([_currentMeta['bemerkung'] as String?, _currentMeta['schadensdetails'] as String?])),
+          if (keinBefund)
+            _buildKeinBefundField()
+          else
+            _buildBulletSection('Schäden', schaeden),
+          _buildField(
+            'Bemerkung',
+            _getFirstNonEmptyString([
+              _currentMeta['bemerkung'] as String?,
+              _currentMeta['schadensdetails'] as String?,
+            ]),
+          ),
         ]),
         section('Lage / Örtlichkeit', [
           _buildField('Örtlichkeit', oertlichkeit),
@@ -1099,18 +1383,30 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
           _buildField('Oberflächenart', oberflaeche),
           _buildField('Bemerkung Oberfläche', obflBem),
         ]),
-        section('Schachtmaße / Einstieg', [
-          _buildField('Steigeisen Steighöhe (cm)', _appendCm(st1Hoehe)),
-          _buildField('Steigeisen Rückenfreiheit (cm)', _appendCm(st1Rf)),
-          _buildField('Steigeisen Steighöhe (cm)', _appendCm(st2Hoehe)),
-          _buildField('Steigeisen Rückenfreiheit (cm)', _appendCm(st2Rf)),
-          _buildField('Konusanfang (cm)', _appendCm(konusAnf)),
-          _buildField('815 (cm)', _firstNonEmpty([mass815?.toString(), null])),
-          _buildField('Konusende (cm)', _appendCm(konusEnd)),
-          _buildField('Berme (cm)', _firstNonEmpty([berme?.toString(), null])),
-          _buildField('Solltiefe (cm)', _appendCm(solltiefe)),
-        ]),
-        _buildMediaSection('Medien / Anhänge', fotos: fotos, videos: videos, audios: audios),
+        section(
+          rfActive
+              ? 'Keine Rückenfreiheit / Zusatzdaten'
+              : 'Schachtmaße / Einstieg',
+          [
+            _buildField('Steigeisen Steighöhe (cm)', _appendCm(st1Hoehe)),
+            _buildField('Steigeisen Rückenfreiheit (cm)', _appendCm(st1Rf)),
+            _buildField('Steigeisen Steighöhe (cm)', _appendCm(st2Hoehe)),
+            _buildField('Steigeisen Rückenfreiheit (cm)', _appendCm(st2Rf)),
+            _buildField('Konusanfang (cm)', _appendCm(konusAnf)),
+            _buildField('Konusende (cm)', _appendCm(konusEnd)),
+            _buildField(
+              'Berme (cm)',
+              _firstNonEmpty([berme?.toString(), null]),
+            ),
+            _buildField('Solltiefe (cm)', _appendCm(solltiefe)),
+          ],
+        ),
+        _buildMediaSection(
+          'Medien / Anhänge',
+          fotos: fotos,
+          videos: videos,
+          audios: audios,
+        ),
       ],
     );
   }
@@ -1128,22 +1424,24 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         ),
         child: isImage
             ? (isData
-                ? Image.memory(
-                    _dataUrlToBytes(dataUrl),
-                    fit: BoxFit.cover,
-                    width: 48,
-                    height: 48,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
-                  )
-                : (kIsWeb
-                    ? Image.network(
-                        _resolveWebSrc(dataUrl),
-                        fit: BoxFit.cover,
-                        width: 48,
-                        height: 48,
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
-                      )
-                    : const Icon(Icons.broken_image, size: 32)))
+                  ? Image.memory(
+                      _dataUrlToBytes(dataUrl),
+                      fit: BoxFit.cover,
+                      width: 48,
+                      height: 48,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.broken_image),
+                    )
+                  : (kIsWeb
+                        ? Image.network(
+                            _resolveWebSrc(dataUrl),
+                            fit: BoxFit.cover,
+                            width: 48,
+                            height: 48,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.broken_image),
+                          )
+                        : const Icon(Icons.broken_image, size: 32)))
             : const Center(child: Icon(Icons.play_circle_outline, size: 40)),
       ),
     );
@@ -1164,10 +1462,16 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
                       minScale: 0.5,
                       maxScale: 4.0,
                       child: _isDataUrl(dataUrl)
-                        ? Image.memory(_dataUrlToBytes(dataUrl), fit: BoxFit.contain)
-                        : (kIsWeb
-                          ? Image.network(_resolveWebSrc(dataUrl), fit: BoxFit.contain)
-                          : const Icon(Icons.broken_image, size: 128)),
+                          ? Image.memory(
+                              _dataUrlToBytes(dataUrl),
+                              fit: BoxFit.contain,
+                            )
+                          : (kIsWeb
+                                ? Image.network(
+                                    _resolveWebSrc(dataUrl),
+                                    fit: BoxFit.contain,
+                                  )
+                                : const Icon(Icons.broken_image, size: 128)),
                     )
                   : _buildVideoPlayer(dataUrl),
             ),
@@ -1200,7 +1504,8 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
 
   String _resolveWebSrc(String value) {
     final normalized = value.replaceAll('\\', '/');
-    if (normalized.startsWith('data:') || normalized.startsWith('http')) return normalized;
+    if (normalized.startsWith('data:') || normalized.startsWith('http'))
+      return normalized;
     if (normalized.startsWith('assets/')) return normalized;
     // Prefer the Flutter web asset path; fallback to raw value
     return 'assets/$normalized';
@@ -1221,9 +1526,33 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
   String? _getListOrString(dynamic value) {
     if (value == null) return null;
     if (value is List) {
-      return value.join(', ');
+      final text = value
+          .map((e) => e?.toString().trim() ?? '')
+          .where((e) => e.isNotEmpty)
+          .join(', ');
+      return text.isEmpty ? null : text;
     }
-    return value.toString();
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  String? _plainText(dynamic value) {
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty || text == '—') return null;
+    return text;
+  }
+
+  bool _hasText(dynamic value) => _plainText(value) != null;
+
+  String? _boolToJaNein(dynamic value) {
+    if (value == null) return null;
+    if (value is bool) return value ? 'Ja' : 'Nein';
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+    final lower = text.toLowerCase();
+    if (lower == 'true' || lower == 'ja') return 'Ja';
+    if (lower == 'false' || lower == 'nein') return 'Nein';
+    return text;
   }
 
   String? _getAbteilungenText(Map<String, dynamic> meta) {
@@ -1274,6 +1603,42 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     return null;
   }
 
+  String? _steckbriefDescription() {
+    final base = (_currentMeta['beschreibung'] ?? '').toString().trim();
+    final refs = _collectAllAttachmentRefs(
+      fotos: _safeStringList(_currentMeta['mediaFotos']),
+      videos: _safeStringList(_currentMeta['mediaVideos']),
+      audios: _safeStringList(_currentMeta['mediaAudios']),
+    );
+    final hints = _bindingKindHints();
+    final counts = <String, int>{};
+
+    for (final ref in refs) {
+      final kind = _detectAttachmentKind(ref, hint: hints[ref]);
+      counts[kind] = (counts[kind] ?? 0) + 1;
+    }
+
+    final parts = <String>[];
+    void addCount(String key, String singular, String plural) {
+      final count = counts[key] ?? 0;
+      if (count > 0) parts.add('$count ${count == 1 ? singular : plural}');
+    }
+
+    addCount('photo', 'Foto', 'Fotos');
+    addCount('video', 'Video', 'Videos');
+    addCount('audio', 'Audio-Datei', 'Audio-Dateien');
+    addCount('pdf', 'PDF-Datei', 'PDF-Dateien');
+    addCount('word', 'Word-Datei', 'Word-Dateien');
+    addCount('excel', 'Excel-Datei', 'Excel-Dateien');
+    addCount('powerpoint', 'PowerPoint-Datei', 'PowerPoint-Dateien');
+    addCount('other', 'weitere Datei', 'weitere Dateien');
+
+    final media = parts.isEmpty ? '' : 'Medien / Dateien: ${parts.join(', ')}';
+    if (base.isEmpty) return media.isEmpty ? null : media;
+    if (media.isEmpty) return base;
+    return '$base | $media';
+  }
+
   Widget _buildBulletSection(String label, List<String> items) {
     final visible = items
         .map((e) => e.trim().replaceFirst(RegExp(r'^\d+\.\s*'), ''))
@@ -1288,23 +1653,35 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         children: [
           RichText(
             text: TextSpan(
-              style: const TextStyle(fontSize: _fontField, color: Colors.black87),
+              style: const TextStyle(
+                fontSize: _fontField,
+                color: Colors.black87,
+              ),
               children: [
                 TextSpan(
                   text: '$label: ',
-                  style: const TextStyle(fontSize: _fontField, fontWeight: FontWeight.w700, color: Colors.black87),
+                  style: const TextStyle(
+                    fontSize: _fontField,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 4),
-          ...visible.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  item,
-                  style: const TextStyle(fontSize: _fontField, color: Colors.black87),
+          ...visible.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text(
+                item,
+                style: const TextStyle(
+                  fontSize: _fontField,
+                  color: Colors.black87,
                 ),
-              )),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1315,7 +1692,11 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     return pdfs.length;
   }
 
-  int _countByType(List<String> extensions, dynamic mediaPdfs, dynamic mediaBindings) {
+  int _countByType(
+    List<String> extensions,
+    dynamic mediaPdfs,
+    dynamic mediaBindings,
+  ) {
     final values = <String>[..._safeStringList(mediaPdfs)];
     if (mediaBindings is List) {
       for (final item in mediaBindings) {
@@ -1327,7 +1708,12 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
         }
       }
     }
-    return values.where((value) => extensions.any((ext) => value.toLowerCase().endsWith('.$ext'))).length;
+    return values
+        .where(
+          (value) =>
+              extensions.any((ext) => value.toLowerCase().endsWith('.$ext')),
+        )
+        .length;
   }
 
   String? _appendCm(dynamic v) {
@@ -1344,8 +1730,14 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
   }
 
   String? _buildLeitungKaputtSummary(Map<String, dynamic> meta) {
-    final schaeden = (meta['schaeden'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [];
-    final hasLeitungKaputt = schaeden.any((s) => s.toLowerCase() == 'leitung kaputt');
+    final schaeden =
+        (meta['schaeden'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [];
+    final hasLeitungKaputt = schaeden.any(
+      (s) => s.toLowerCase() == 'leitung kaputt',
+    );
     if (!hasLeitungKaputt) return null;
 
     final leitung = meta['leitung'];
@@ -1364,13 +1756,13 @@ class _EntryDetailDialogState extends State<EntryDetailDialog> {
     if (pairs.isEmpty) return null;
     return pairs.join(', ');
   }
+
   Widget _buildAudioPlayer(String audioPath) {
-    final fileName = audioPath.contains('/') ? audioPath.split('/').last : audioPath;
-    
-    return AudioPlayerWidget(
-      audioPath: audioPath,
-      fileName: fileName,
-    );
+    final fileName = audioPath.contains('/')
+        ? audioPath.split('/').last
+        : audioPath;
+
+    return AudioPlayerWidget(audioPath: audioPath, fileName: fileName);
   }
 
   // ...existing code...

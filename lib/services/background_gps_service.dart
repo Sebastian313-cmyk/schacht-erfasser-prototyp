@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'gps_service.dart';
+
 /// In-process Background GPS service.
 ///
 /// This subscribes to the Geolocator position stream and writes the
@@ -23,7 +25,8 @@ class BackgroundGpsService {
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
       }
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
         return;
       }
 
@@ -31,26 +34,31 @@ class BackgroundGpsService {
       if (_sub != null) return;
 
       final settings = const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 5,
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 0,
       );
 
-      _sub = Geolocator.getPositionStream(locationSettings: settings).listen((pos) async {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          final data = {
-            'lat': pos.latitude,
-            'lon': pos.longitude,
-            'accuracy_m': pos.accuracy.round(),
-            'ts': DateTime.now().toIso8601String(),
-          };
-          await prefs.setString('gps_last', jsonEncode(data));
-        } catch (e) {
-          debugPrint('Fehler beim Schreiben von gps_last: $e');
-        }
-      }, onError: (e) {
-        debugPrint('PositionStream Fehler: $e');
-      });
+      _sub = Geolocator.getPositionStream(locationSettings: settings).listen(
+        (pos) async {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final data = {
+              'lat': pos.latitude,
+              'lon': pos.longitude,
+              'accuracy_m': pos.accuracy.round(),
+              'target_accuracy_m': GpsService.targetAccuracyMeters.round(),
+              'target_reached': pos.accuracy <= GpsService.targetAccuracyMeters,
+              'ts': DateTime.now().toIso8601String(),
+            };
+            await prefs.setString('gps_last', jsonEncode(data));
+          } catch (e) {
+            debugPrint('Fehler beim Schreiben von gps_last: $e');
+          }
+        },
+        onError: (e) {
+          debugPrint('PositionStream Fehler: $e');
+        },
+      );
     } catch (e) {
       debugPrint('Fehler beim Starten des BackgroundGpsService: $e');
     }

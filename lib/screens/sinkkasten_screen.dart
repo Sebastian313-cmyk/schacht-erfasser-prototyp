@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 import '../services/session_store.dart';
 import '../services/repository.dart';
@@ -27,27 +26,30 @@ class SinkkastenScreen extends StatefulWidget {
 }
 
 class _SinkkastenScreenState extends State<SinkkastenScreen> {
-    // State für 312/313 Buttons
-    bool _show312 = false;
-    bool _show313 = false;
-    void _toggle312() {
-      setState(() {
-        _show312 = !_show312;
-        if (_show312) _show313 = false;
-      });
-    }
-    void _toggle313() {
-      setState(() {
-        _show313 = !_show313;
-        if (_show313) _show312 = false;
-      });
-    }
+  // State für 312/313 Buttons
+  bool _show312 = false;
+  bool _show313 = false;
+  void _toggle312() {
+    setState(() {
+      _show312 = !_show312;
+      if (_show312) _show313 = false;
+    });
+  }
+
+  void _toggle313() {
+    setState(() {
+      _show313 = !_show313;
+      if (_show313) _show312 = false;
+    });
+  }
+
   SessionData? _session;
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
 
   bool get _isEdit {
-    final key = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final key =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     return widget.existingMeta != null && (key ?? '').isNotEmpty;
   }
 
@@ -60,14 +62,15 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
   String _auspraegung = 'Normalausführung';
   bool _aufbauMuenchner = false;
   String _abdeckung = 'Passavant';
-  final _herstellerBemCtrl = TextEditingController(); // für "Weitere Hersteller / Bemerkung"
-  final _abdeckungBemCtrl = TextEditingController(); // für Abdeckung (Bemerkung)
+  final _herstellerBemCtrl =
+      TextEditingController(); // für "Weitere Hersteller / Bemerkung"
+  final _abdeckungBemCtrl =
+      TextEditingController(); // für Abdeckung (Bemerkung)
 
   // Ablaufrinne (neu, nur SSK) – Positionsnummer im Format "X/Y"
   bool _ablaufrinne = false;
   final _ablaufrinneVerbindungCtrl = TextEditingController();
   String? _letztePosition; // Letzte gespeicherte SSK-Position für Ablaufrinne
-  final Set<String> _usedAblaufrinnePositions = <String>{}; // Bereits belegte Positionen aus Ablaufrinnen
 
   // Verfügbarkeit & Status vor Ort (SSK) - Mehrfachauswahl
   final Set<String> _verfuegbarkeit = <String>{};
@@ -83,7 +86,14 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
   bool _keinBefund = false;
 
   final List<_LeitRow> _leitung = [];
-  final List<String> _leitungArten = const ['Scherbe', 'Riss', 'Beton', 'Verstopft', 'Wurzeln', 'Fremder Gegenstand'];
+  final List<String> _leitungArten = const [
+    'Scherbe',
+    'Riss',
+    'Beton',
+    'Verstopft',
+    'Wurzeln',
+    'Fremder Gegenstand',
+  ];
 
   // Medien & Bemerkung
   final List<String> _fotos = [];
@@ -130,11 +140,14 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     _gruppe = (m['gruppe'] as String?) ?? _gruppe;
     _aufbauMuenchner = (m['aufbauMuenchner'] == true);
     _auspraegung = _normalizeAuspraegung(m['auspraegung'] as String?);
-    _herstellerBemCtrl.text = _extractHerstellerBem(m['auspraegung'] as String?);
+    _herstellerBemCtrl.text = _extractHerstellerBem(
+      m['auspraegung'] as String?,
+    );
     _abdeckung = _normalizeAbdeckung(m['abdeckung'] as String?);
     _abdeckungBemCtrl.text = _extractAbdeckungBem(m['abdeckung'] as String?);
     _ablaufrinne = (m['ablaufrinne'] == true);
-    _ablaufrinneVerbindungCtrl.text = (m['ablaufrinneVerbindung'] ?? '').toString();
+    _ablaufrinneVerbindungCtrl.text = (m['ablaufrinneVerbindung'] ?? '')
+        .toString();
 
     _verfuegbarkeit
       ..clear()
@@ -149,7 +162,11 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
 
     _schaeden
       ..clear()
-      ..addAll(((m['schaeden'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['schaeden'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _keinBefund = (m['keinBefund'] == true);
 
     _leitung.clear();
@@ -162,12 +179,21 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
 
     _fotos
       ..clear()
-      ..addAll(((m['mediaFotos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaFotos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _videos
       ..clear()
-      ..addAll(((m['mediaVideos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaVideos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _audios.clear();
-    final audios = (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final audios =
+        (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
     _audios.addAll(audios);
     final pdf = m['mediaPdfs'];
     if (pdf is List) _pdfs.addAll(pdf.cast<String>());
@@ -179,7 +205,10 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
 
   Set<String> _splitSet(dynamic v) {
     if (v is List) {
-      return v.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toSet();
+      return v
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toSet();
     }
     final s = (v ?? '').toString().trim();
     if (s.isEmpty) return {};
@@ -194,7 +223,8 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
 
   String _extractHerstellerBem(String? stored) {
     final s = (stored ?? '').trim();
-    if (s.startsWith('Bemerkung:')) return s.replaceFirst('Bemerkung:', '').trim();
+    if (s.startsWith('Bemerkung:'))
+      return s.replaceFirst('Bemerkung:', '').trim();
     return '';
   }
 
@@ -206,63 +236,36 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
 
   String _extractAbdeckungBem(String? stored) {
     final s = (stored ?? '').trim();
-    if (s.startsWith('Bemerkung:')) return s.replaceFirst('Bemerkung:', '').trim();
+    if (s.startsWith('Bemerkung:'))
+      return s.replaceFirst('Bemerkung:', '').trim();
     return '';
   }
 
   Future<void> _loadLetztePosition() async {
     if (_session == null) return;
     final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => k.startsWith('obj_${_session!.evnr}_${_session!.strasse}_') && k.endsWith('_SSK')).toList();
+    final keys = prefs
+        .getKeys()
+        .where(
+          (k) =>
+              k.startsWith('obj_${_session!.evnr}_${_session!.strasse}_') &&
+              k.endsWith('_SSK'),
+        )
+        .toList();
     if (keys.isEmpty) return;
-    
+
     // Sortiere nach Positionsnummer
     keys.sort((a, b) {
       final posA = a.split('_')[3];
       final posB = b.split('_')[3];
       return _comparePositions(posA, posB);
     });
-    
+
     // Letzte Position extrahieren
     final lastKey = keys.last;
     _letztePosition = lastKey.split('_')[3];
-    
-    // Lade alle belegten Ablaufrinne-Positionen
-    await _loadUsedAblaufrinnePositions();
   }
 
-  /// Lädt alle bereits in Ablaufrinnen verwendeten Positionen
-  Future<void> _loadUsedAblaufrinnePositions() async {
-    if (_session == null) return;
-    
-    _usedAblaufrinnePositions.clear();
-    final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => 
-      k.startsWith('obj_${_session!.evnr}_${_session!.strasse}_') && 
-      k.endsWith('_SSK')).toList();
-    
-    for (final key in keys) {
-      final jsonStr = prefs.getString(key);
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        try {
-          final json = jsonDecode(jsonStr);
-          if (json is Map<String, dynamic>) {
-            final posNr = (json['posNr'] as String?) ?? '';
-            // Wenn posNr im Format "2/4" ist (Ablaufrinne), extrahiere beide Zahlen
-            if (posNr.contains('/')) {
-              final parts = posNr.split('/');
-              if (parts.length == 2) {
-                _usedAblaufrinnePositions.add(parts[0].trim());
-                _usedAblaufrinnePositions.add(parts[1].trim());
-              }
-            }
-          }
-        } catch (_) {
-          // Ignoriere Fehler beim Deserialisieren
-        }
-      }
-    }
-  }
   int _comparePositions(String a, String b) {
     final numA = int.tryParse(a.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
     final numB = int.tryParse(b.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
@@ -324,9 +327,9 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
         _audios.add(audioData);
         setState(() {});
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Audio hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Audio hinzugefügt')));
         }
       }
     }
@@ -372,10 +375,14 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: Text(
-                      recognizedText.isEmpty ? 'Erkannter Text wird hier angezeigt' : recognizedText,
+                      recognizedText.isEmpty
+                          ? 'Erkannter Text wird hier angezeigt'
+                          : recognizedText,
                       style: TextStyle(
                         fontSize: 14,
-                        color: recognizedText.isEmpty ? Colors.grey : Colors.black,
+                        color: recognizedText.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
                       ),
                     ),
                   ),
@@ -431,9 +438,9 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Diktat hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Diktat hinzugefügt')));
         }
       }
     });
@@ -446,21 +453,6 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       _videos.addAll(result.videos);
       _pdfs.addAll(result.pdfs);
     });
-  }
-
-  Future<bool> _confirm(BuildContext ctx, String title, String msg) async {
-    return (await showDialog<bool>(
-          context: ctx,
-          builder: (c) => AlertDialog(
-            title: Text(title),
-            content: Text(msg),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Abbrechen')),
-              FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('OK')),
-            ],
-          ),
-        )) ??
-        false;
   }
 
   void _toggleLeitungKaputt(bool on) {
@@ -478,8 +470,13 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
   // ----------------------------- Save -----------------------------
   Future<void> _onSave() async {
     if (_session == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+          ),
+        ),
+      );
       return;
     }
     if (!_formKey.currentState!.validate()) return;
@@ -491,9 +488,9 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       message: '"Kein Befund" schließt Schaden-Auswahl aus.',
     );
     if (!keinBefundCheck.isValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(keinBefundCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(keinBefundCheck.message!)));
       return;
     }
 
@@ -504,36 +501,16 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       if (verbindung.isEmpty) {
         // Verbindung ist optional: ohne zweite Position bleibt die normale Positionsnummer bestehen.
       } else {
-      // Kleinere Zahl zuerst (z.B. 2/5 statt 5/2)
-      final num1 = int.tryParse(verbindung) ?? 0;
-      final num2 = int.tryParse(pos) ?? 0;
-      final sorted = num1 < num2 ? '$num1/$num2' : '$num2/$num1';
-      pos = sorted;
-      
-      // Prüfe ob eine der beiden Positionen bereits belegt ist (nur wenn Edit)
-      final oldPos = (widget.existingMeta?['posNr'] as String?)?.trim();
-      if (oldPos == null || oldPos != pos) { // Bei neuen oder geänderten Einträgen
-        final parts = pos.split('/');
-        final alreadyUsed = <String>[];
-        for (final part in parts) {
-          if (_usedAblaufrinnePositions.contains(part)) {
-            alreadyUsed.add(part);
-          }
-        }
-        
-        if (alreadyUsed.isNotEmpty && mounted) {
-          final ok = await _confirm(
-            context, 
-            'Warnung', 
-            'Die Position(en) ${alreadyUsed.join(", ")} ist/sind bereits in einer anderen Ablaufrinne belegt.\n\nTrotzdem speichern?'
-          );
-          if (!ok) return;
-        }
-      }
+        // Kleinere Zahl zuerst (z.B. 2/5 statt 5/2)
+        final num1 = int.tryParse(verbindung) ?? 0;
+        final num2 = int.tryParse(pos) ?? 0;
+        final sorted = num1 < num2 ? '$num1/$num2' : '$num2/$num1';
+        pos = sorted;
       }
     }
 
-    final existingKey = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final existingKey =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     final uniqueCheck = await ValidationService.validateUniquePosition(
       evnr: _session!.evnr,
       strasse: _session!.strasse,
@@ -542,9 +519,9 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     );
     if (!uniqueCheck.isValid) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uniqueCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(uniqueCheck.message!)));
       return;
     }
 
@@ -558,7 +535,8 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       }
     }
 
-    final usesMuenchnerAufbau = _gruppe == 'Weitere Hersteller' && _aufbauMuenchner;
+    final usesMuenchnerAufbau =
+        _gruppe == 'Weitere Hersteller' && _aufbauMuenchner;
     String? abdeckungMeta;
     if (usesMuenchnerAufbau) {
       if (_abdeckung == 'Bemerkung') {
@@ -573,19 +551,24 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     var bemerkung = _bemCtrl.text.trim();
     if (_ablaufrinne) {
       final emoji = '🟦';
-      bemerkung = bemerkung.isEmpty ? '$emoji Ablaufrinne' : '$bemerkung | $emoji Ablaufrinne';
+      bemerkung = bemerkung.isEmpty
+          ? '$emoji Ablaufrinne'
+          : '$bemerkung | $emoji Ablaufrinne';
     }
     if (_fotos.isNotEmpty || _videos.isNotEmpty) {
-      final mv = '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
+      final mv =
+          '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
       bemerkung = bemerkung.isEmpty ? mv : '$bemerkung | $mv';
     }
 
     // Zusätzlich: Eintrag im Repository für Bericht/Export ablegen
     try {
       final leitungText = _leitung
-          .map((e) => (e.meter.trim().isEmpty && (e.art).trim().isEmpty)
-              ? null
-              : '${e.meter.trim().isEmpty ? '?' : e.meter.trim()} m: ${e.art}')
+          .map(
+            (e) => (e.meter.trim().isEmpty && (e.art).trim().isEmpty)
+                ? null
+                : '${e.meter.trim().isEmpty ? '?' : e.meter.trim()} m: ${e.art}',
+          )
           .whereType<String>()
           .join(', ');
 
@@ -604,9 +587,13 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
 
         bemerkung: bemerkung.isEmpty ? null : bemerkung,
 
-        verfuegbarkeitLabel: _verfuegbarkeit.isEmpty ? null : _verfuegbarkeit.join(', '),
+        verfuegbarkeitLabel: _verfuegbarkeit.isEmpty
+            ? null
+            : _verfuegbarkeit.join(', '),
 
-        statusVorOrtLabel: _statusVorOrt.isEmpty ? null : _statusVorOrt.join(', '),
+        statusVorOrtLabel: _statusVorOrt.isEmpty
+            ? null
+            : _statusVorOrt.join(', '),
 
         // Typ/Ausprägung geht in "spezial"
         notizen: null,
@@ -615,13 +602,16 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
           if (_gruppe == 'SSK Münchner Modell') {
             spezial = 'Münchner Modell – $_auspraegung';
           } else if (_aufbauMuenchner) {
-            spezial = 'Weitere Hersteller – Aufbau Münchner Modell – $_auspraegung';
+            spezial =
+                'Weitere Hersteller – Aufbau Münchner Modell – $_auspraegung';
           } else {
             spezial = _auspraegung == 'Bemerkung'
                 ? 'Weitere Hersteller – ${_herstellerBemCtrl.text.trim()}'
                 : 'Weitere Hersteller – $_auspraegung';
           }
-          final abdeckungLabel = (abdeckungMeta ?? '').replaceFirst('Bemerkung:', '').trim();
+          final abdeckungLabel = (abdeckungMeta ?? '')
+              .replaceFirst('Bemerkung:', '')
+              .trim();
           if (abdeckungLabel.isNotEmpty) {
             spezial = '$spezial • Abdeckung: $abdeckungLabel';
           }
@@ -636,7 +626,10 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     }
 
     // GPS erfassen (einmalig beim Speichern)
-    final gps = await GpsService.getCurrentLocation();
+    final gps = hasNichtImNis(_verfuegbarkeit)
+        ? ((await GpsService.getCurrentLocation()) ??
+              widget.existingMeta?['gps'])
+        : null;
 
     // Persistenz
     final idNr = _idNrCtrl.text.trim();
@@ -646,9 +639,9 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       required: false,
     );
     if (idValidation != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(idValidation)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(idValidation)));
       return;
     }
     final meta = {
@@ -658,14 +651,19 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       'erfasser': _session!.erfasser,
       'zeitIso': _session!.zeitIso,
       'wetter': _session!.wetter,
+      'temperatur': _session!.temperatur,
       'posNr': pos,
       'idNr': idNr,
       'gruppe': _gruppe,
-      'auspraegung': _auspraegung == 'Bemerkung' ? 'Bemerkung: ${_herstellerBemCtrl.text.trim()}' : _auspraegung,
+      'auspraegung': _auspraegung == 'Bemerkung'
+          ? 'Bemerkung: ${_herstellerBemCtrl.text.trim()}'
+          : _auspraegung,
       if (_gruppe == 'Weitere Hersteller') 'aufbauMuenchner': _aufbauMuenchner,
       if (usesMuenchnerAufbau) 'abdeckung': abdeckungMeta,
       'ablaufrinne': _ablaufrinne,
-      'ablaufrinneVerbindung': _ablaufrinne ? _ablaufrinneVerbindungCtrl.text.trim() : '',
+      'ablaufrinneVerbindung': _ablaufrinne
+          ? _ablaufrinneVerbindungCtrl.text.trim()
+          : '',
       'verfuegbarkeit': _verfuegbarkeit.toList(),
       'statusVorOrt': _statusVorOrt.toList(),
       'abteilungen': _abteilungen.toList(),
@@ -685,7 +683,8 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
         ? existingKey!
         : 'obj_${_session!.evnr}_${_session!.strasse}_${pos}_SSK';
     if (_isEdit) {
-      meta['createdAt'] = widget.existingMeta?['createdAt'] ?? meta['createdAt'];
+      meta['createdAt'] =
+          widget.existingMeta?['createdAt'] ?? meta['createdAt'];
     }
     meta['storageKey'] = metaKey;
     await SpeicherService.upsertEntry(metaKey, meta);
@@ -693,12 +692,16 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     // Hinweis: Einzel-PDF-Download entfernt. Export erfolgt zentral über ZIP.
 
     if (!mounted) return;
-    
+
     // Letzte Position aktualisieren für nächste Ablaufrinne
     await _loadLetztePosition();
-    
+
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SSK gespeichert (im Gesamt-Export enthalten).')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('SSK gespeichert (im Gesamt-Export enthalten).'),
+        ),
+      );
       Navigator.pop(context);
     }
   }
@@ -706,7 +709,9 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
   // ----------------------------- UI -----------------------------
   Future<void> _openNisPlan() async {
     final evnr = _session?.evnr ?? '';
-    final nis = evnr.trim().isNotEmpty ? await SessionStore.loadNisPlanForEvnr(evnr) : null;
+    final nis = evnr.trim().isNotEmpty
+        ? await SessionStore.loadNisPlanForEvnr(evnr)
+        : null;
     if (!mounted) return;
     final base64 = nis?.pdfBase64 ?? _session?.nisPlanPdf;
     if (base64 == null || base64.isEmpty) {
@@ -742,7 +747,7 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
             '- Ablaufart, Zustand und weitere SSK-Merkmale eintragen.\n'
             '- Zugeordnete Positionen können optional ergänzt werden.\n\n'
             'Hinweis:\n'
-            'Die Erfassung wird im Modul gespeichert, Exportdateien entstehen erst im Bericht.'
+            'Die Erfassung wird im Modul gespeichert, Exportdateien entstehen erst im Bericht.',
           ),
         ),
         actions: [
@@ -763,6 +768,7 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Straßensinkkasten (SSK)'),
+        centerTitle: true,
         actions: [
           TextButton.icon(
             onPressed: _openNisPlan,
@@ -779,498 +785,702 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
         ],
       ),
       body: s == null
-          ? const Center(child: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.'))
+          ? const Center(
+              child: Text(
+                'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+              ),
+            )
           : Form(
               key: _formKey,
-              child: Stepper(
-                currentStep: _currentStep,
-                onStepTapped: (step) => setState(() => _currentStep = step),
-                onStepContinue: () {
-                  if (_currentStep == 0) {
-                    if (!_formKey.currentState!.validate()) return;
-                  }
-                  if (_currentStep < 3) {
-                    setState(() => _currentStep += 1);
-                  } else {
-                    _onSave();
-                  }
-                },
-                onStepCancel: () {
-                  if (_currentStep > 0) {
-                    setState(() => _currentStep -= 1);
-                  }
-                },
-                controlsBuilder: (context, details) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Row(
-                      children: [
-                        FilledButton(
-                          onPressed: details.onStepContinue,
-                          child: Text(_currentStep == 3 ? 'Speichern' : 'Weiter'),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton(
-                          onPressed: details.onStepCancel,
-                          child: const Text('Zurück'),
-                        ),
-                      ],
+              child: Column(
+                children: [
+                  // Kopf
+                  Card(
+                    margin: const EdgeInsets.all(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Erfasser Daten',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          _kv('EVNr', s.evnr),
+                          _kv('Straße', s.strasse),
+                          _kv('Erfasser:in', s.erfasser),
+                          _kv(
+                            'Datum/Zeit',
+                            df.format(
+                              DateTime.tryParse(s.zeitIso) ?? DateTime.now(),
+                            ),
+                          ),
+                          _kv('Wetter', _wIcon(s.wetter)),
+                          _kv(
+                            'Temperatur',
+                            formatTemperatureValue(s.temperatur),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
-                steps: [
-                  // Schritt 1: Basis-Daten
-                  Step(
-                    title: const Text('1. Basis-Daten'),
-                    isActive: _currentStep >= 0,
-                    state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        // Kopf
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('SSK – Kopf', style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ObjectGpsPanel(
+                      initialMeta: widget.existingMeta,
+                      captureEnabled: hasNichtImNis(_verfuegbarkeit),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Stepper
+                  Expanded(
+                    child: Stepper(
+                      currentStep: _currentStep,
+                      onStepTapped: (step) =>
+                          setState(() => _currentStep = step),
+                      onStepContinue: () {
+                        if (_currentStep == 0) {
+                          if (!_formKey.currentState!.validate()) return;
+                        }
+                        if (_currentStep < 3) {
+                          setState(() => _currentStep += 1);
+                        } else {
+                          _onSave();
+                        }
+                      },
+                      onStepCancel: () {
+                        if (_currentStep > 0) {
+                          setState(() => _currentStep -= 1);
+                        }
+                      },
+                      controlsBuilder: (context, details) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Row(
+                            children: [
+                              FilledButton(
+                                onPressed: details.onStepContinue,
+                                child: Text(
+                                  _currentStep == 3 ? 'Speichern' : 'Weiter',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: details.onStepCancel,
+                                child: const Text('Zurück'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      steps: [
+                        // Schritt 1: Basis-Daten
+                        Step(
+                          title: const Text('1. Basis-Daten'),
+                          isActive: _currentStep >= 0,
+                          state: _currentStep > 0
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              // Positionsnummer
+                              _label('Positionsnummer *'),
+                              TextFormField(
+                                controller: _posCtrl,
+                                decoration: const InputDecoration(
+                                  hintText: 'z. B. 1, 1a, 2',
+                                ),
+                                validator:
+                                    ValidationService.validatePositionField,
+                                onChanged: (_) => setState(() {}),
+                              ),
+
+                              const SizedBox(height: 12),
+                              // ID-Nummer
+                              _label('ID-Nummer (optional)'),
+                              TextField(
+                                controller: _idNrCtrl,
+                                decoration: const InputDecoration(
+                                  hintText:
+                                      '8-stellig, nur Ziffern (z. B. 12345678)',
+                                  helperText: 'Optional',
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+                              // Verfügbarkeit
+                              _sectionLabel('Verfügbarkeit'),
                               const SizedBox(height: 6),
-                              _kv('EVNr', s.evnr),
-                              _kv('Straße', s.strasse),
-                              _kv('Erfasser:in', s.erfasser),
-                              _kv('Datum/Zeit', df.format(DateTime.tryParse(s.zeitIso) ?? DateTime.now())),
-                              _kv('Wetter', _wIcon(s.wetter)),
-                            ]),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ObjectGpsPanel(initialMeta: widget.existingMeta),
-                        const SizedBox(height: 12),
-
-                        // Positionsnummer
-                        _label('Positionsnummer *'),
-                        TextFormField(
-                          controller: _posCtrl,
-                          decoration: const InputDecoration(hintText: 'z. B. 1, 1a, 2'),
-                          validator: ValidationService.validatePositionField,
-                          onChanged: (_) => setState(() {}),
-                        ),
-
-                        const SizedBox(height: 12),
-                        // ID-Nummer
-                        _label('ID-Nummer (optional)'),
-                        TextField(
-                          controller: _idNrCtrl,
-                          decoration: const InputDecoration(
-                            hintText: '8-stellig, nur Ziffern (z. B. 12345678)',
-                            helperText: 'Optional',
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-                        // Verfügbarkeit
-                        _sectionLabel('Verfügbarkeit'),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: kVerfuegbarkeitOptionsSsk.map((opt) {
-                            return FilterChip(
-                              label: Text(opt),
-                              selected: _verfuegbarkeit.contains(opt),
-                              onSelected: (v) {
-                                setState(() {
-                                  if (v) {
-                                    _verfuegbarkeit.add(opt);
-                                  } else {
-                                    _verfuegbarkeit.remove(opt);
-                                    if (opt == 'Ergänzen') _verfuegbarkeitErgaenzenCtrl.clear();
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-                        if (_verfuegbarkeit.contains('Ergänzen')) ... [
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _verfuegbarkeitErgaenzenCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Ergänzen - Freitext',
-                              border: OutlineInputBorder(),
-                            ),
-                            maxLines: 2,
-                          ),
-                        ],
-
-                        const SizedBox(height: 16),
-                        // Status vor Ort
-                        _sectionLabel('Status vor Ort'),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ...kStatusAllgemein,
-                            ...kStatusSskExtra,
-                          ].map((opt) {
-                            return FilterChip(
-                              label: Text(opt),
-                              selected: _statusVorOrt.contains(opt),
-                              onSelected: (v) {
-                                setState(() {
-                                  if (v) {
-                                    _statusVorOrt.add(opt);
-                                  } else {
-                                    _statusVorOrt.remove(opt);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Schritt 2: Art (Deckelart + Ablaufrinne)
-                  Step(
-                    title: const Text('2. Art'),
-                    isActive: _currentStep >= 1,
-                    state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        // Deckelart (Gruppe)
-                        _sectionLabel('Deckelart'),
-                        const SizedBox(height: 6),
-                        Wrap(spacing: 8, children: [
-                          ChoiceChip(
-                            label: const Text('SSK Münchner Modell'),
-                            selected: _gruppe == 'SSK Münchner Modell',
-                            onSelected: (_) => setState(() {
-                              _gruppe = 'SSK Münchner Modell';
-                              _aufbauMuenchner = false;
-                              _auspraegung = 'Normalausführung';
-                            }),
-                          ),
-                          ChoiceChip(
-                            label: const Text('Weitere Hersteller'),
-                            selected: _gruppe == 'Weitere Hersteller',
-                            onSelected: (_) => setState(() {
-                              _gruppe = 'Weitere Hersteller';
-                              _aufbauMuenchner = false;
-                              _auspraegung = 'Passavant';
-                            }),
-                          ),
-                        ]),
-                        const SizedBox(height: 12),
-
-                        if (_gruppe == 'Weitere Hersteller') ...[
-                          _sectionLabel('Aufbau wie Münchner Modell?'),
-                          const SizedBox(height: 6),
-                          Wrap(spacing: 8, children: [
-                            ChoiceChip(
-                              label: const Text('Ja'),
-                              selected: _aufbauMuenchner,
-                              onSelected: (_) => setState(() {
-                                _aufbauMuenchner = true;
-                                _auspraegung = 'Normalausführung';
-                              }),
-                            ),
-                            ChoiceChip(
-                              label: const Text('Nein'),
-                              selected: !_aufbauMuenchner,
-                              onSelected: (_) => setState(() {
-                                _aufbauMuenchner = false;
-                                _auspraegung = 'Passavant';
-                              }),
-                            ),
-                          ]),
-                          const SizedBox(height: 12),
-                        ],
-
-                        // Ausprägung (Label abhängig von Gruppe)
-                        _sectionLabel(_gruppe == 'SSK Münchner Modell' ? 'Aufbau' : 'Deckelart'),
-                        const SizedBox(height: 6),
-                        if (_gruppe == 'SSK Münchner Modell' || (_gruppe == 'Weitere Hersteller' && _aufbauMuenchner))
-                          DropdownButtonFormField<String>(
-                            initialValue: _auspraegung,
-                            items: const ['Normalausführung', 'Kurzausführung', 'Beton', 'Sifon']
-                                .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                                .toList(),
-                            onChanged: (v) => setState(() => _auspraegung = v ?? 'Normalausführung'),
-                          )
-                        else
-                          DropdownButtonFormField<String>(
-                            initialValue: _auspraegung,
-                            items: const ['Passavant', 'Brückenablauf', 'Einwalzbar', 'DIN-Modell', 'Bemerkung']
-                                .map((d) => DropdownMenuItem(value: d, child: Text(d == 'Bemerkung' ? 'Bemerkung (frei)' : d)))
-                                .toList(),
-                            onChanged: (v) => setState(() => _auspraegung = v ?? 'Passavant'),
-                          ),
-                        if (_gruppe == 'Weitere Hersteller' && !_aufbauMuenchner && _auspraegung == 'Bemerkung') ...[
-                          const SizedBox(height: 8),
-                          TextField(controller: _herstellerBemCtrl, decoration: const InputDecoration(labelText: 'Hersteller/Typ (Bemerkung)')),
-                        ],
-
-                        if (_gruppe == 'Weitere Hersteller' && _aufbauMuenchner) ...[
-                          const SizedBox(height: 12),
-                          _sectionLabel('Abdeckung *'),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            initialValue: _abdeckung,
-                            items: const ['Passavant', 'Brückenablauf', 'Einwalzbar', 'DIN-Modell', 'Bemerkung']
-                                .map((d) => DropdownMenuItem(value: d, child: Text(d == 'Bemerkung' ? 'Bemerkung (frei)' : d)))
-                                .toList(),
-                            onChanged: (v) => setState(() => _abdeckung = v ?? 'Passavant'),
-                          ),
-                          if (_abdeckung == 'Bemerkung') ...[
-                            const SizedBox(height: 8),
-                            TextField(controller: _abdeckungBemCtrl, decoration: const InputDecoration(labelText: 'Abdeckung (Bemerkung)')),
-                          ],
-                        ],
-
-                        const SizedBox(height: 20),
-                        // Ablaufrinne
-                        _sectionLabel('Ablaufrinne'),
-                        const SizedBox(height: 6),
-                        CheckboxListTile(
-                          value: _ablaufrinne,
-                          onChanged: (v) => setState(() {
-                            _ablaufrinne = v ?? false;
-                            if (_ablaufrinne && _letztePosition != null) {
-                              _ablaufrinneVerbindungCtrl.text = _letztePosition!;
-                            }
-                          }),
-                          title: const Text('Mit anderer Position verbinden'),
-                          subtitle: Text(_ablaufrinne 
-                            ? 'Ergebnis: ${_ablaufrinneVerbindungCtrl.text.trim().isEmpty ? "X" : _ablaufrinneVerbindungCtrl.text.trim()}/${_posCtrl.text.trim().isEmpty ? "Y" : _posCtrl.text.trim()}'
-                            : 'Wenn es sich um eine Ablaufrinne handelt, die zwei Positionen verbindet (z.B. Position 2 und 5)'),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          dense: true,
-                        ),
-                        if (_ablaufrinne) ...[
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _ablaufrinneVerbindungCtrl,
-                            decoration: InputDecoration(
-                              labelText: 'Position zum Verbinden *',
-                              hintText: _letztePosition != null ? 'z.B. $_letztePosition' : 'z.B. 2',
-                            ),
-                            validator: (v) => !_ablaufrinne
-                                ? null
-                                : (v == null || v.trim().isEmpty
-                                    ? null
-                                    : ValidationService.validatePositionField(v)),
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Schritt 3: Schäden & Abteilung
-                  Step(
-                    title: const Text('3. Schäden & Abteilung'),
-                    isActive: _currentStep >= 2,
-                    state: _currentStep > 2 ? StepState.complete : StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        // Schäden
-                        _sectionLabel('Schäden'),
-                        const SizedBox(height: 6),
-                        _chipsMulti([
-                          'Komplett', 'Rost', 'Rahmen/Rost', 'Auflagerringe', 'Eimer', 'Mittelstück', 'Leitung kaputt', 'Reinigung/Nachbefahren'
-                        ], _schaeden, disable: _keinBefund, onToggle: (name, sel) {
-                          if (name == 'Leitung kaputt') _toggleLeitungKaputt(sel);
-                        }),
-                        const SizedBox(height: 8),
-                        FilterChip(
-                          label: Text('Kein Befund', style: TextStyle(color: _keinBefund ? Colors.green : null)),
-                          selected: _keinBefund,
-                          onSelected: (v) => setState(() {
-                            _keinBefund = v;
-                            if (v) {
-                              _schaeden.clear();
-                              _leitung.clear();
-                            }
-                          }),
-                        ),
-
-                        const SizedBox(height: 20),
-                        // Abteilungen
-                        _sectionLabel('Abteilungen'),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            ElevatedButton(
-                              onPressed: _toggle312,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _show312 ? Colors.blue : null,
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: kVerfuegbarkeitOptionsSsk.map((opt) {
+                                  return FilterChip(
+                                    label: Text(opt),
+                                    selected: _verfuegbarkeit.contains(opt),
+                                    onSelected: (v) {
+                                      setState(() {
+                                        if (v) {
+                                          _verfuegbarkeit.add(opt);
+                                        } else {
+                                          _verfuegbarkeit.remove(opt);
+                                          if (opt == 'Ergänzen')
+                                            _verfuegbarkeitErgaenzenCtrl
+                                                .clear();
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
                               ),
-                              child: const Text('312'),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: _toggle313,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _show313 ? Colors.blue : null,
-                              ),
-                              child: const Text('313'),
-                            ),
-                          ],
-                        ),
-                        if (_show312)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Wrap(
-                              spacing: 8,
-                              children: [
-                                FilterChip(
-                                  label: const Text('312 IZ AR'),
-                                  selected: _abteilungen.contains('312 IZ AR'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 IZ AR') : _abteilungen.remove('312 IZ AR');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('312 Ost'),
-                                  selected: _abteilungen.contains('312 Ost'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 Ost') : _abteilungen.remove('312 Ost');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('312 Service'),
-                                  selected: _abteilungen.contains('312 Service'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 Service') : _abteilungen.remove('312 Service');
-                                  }),
-                                ),
-                                FilterChip(
-                                  label: const Text('312 West'),
-                                  selected: _abteilungen.contains('312 West'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('312 West') : _abteilungen.remove('312 West');
-                                  }),
+                              if (_verfuegbarkeit.contains('Ergänzen')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _verfuegbarkeitErgaenzenCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Ergänzen - Freitext',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
                                 ),
                               ],
-                            ),
+
+                              const SizedBox(height: 16),
+                              // Status vor Ort
+                              _sectionLabel('Status vor Ort'),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children:
+                                    [
+                                      ...kStatusAllgemein,
+                                      ...kStatusSskExtra,
+                                    ].map((opt) {
+                                      return FilterChip(
+                                        label: Text(opt),
+                                        selected: _statusVorOrt.contains(opt),
+                                        onSelected: (v) {
+                                          setState(() {
+                                            if (v) {
+                                              _statusVorOrt.add(opt);
+                                            } else {
+                                              _statusVorOrt.remove(opt);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                              ),
+                            ],
                           ),
-                        if (_show313)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Wrap(
-                              spacing: 8,
-                              children: [
-                                FilterChip(
-                                  label: const Text('313 TU'),
-                                  selected: _abteilungen.contains('313 TU'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('313 TU') : _abteilungen.remove('313 TU');
-                                  }),
+                        ),
+
+                        // Schritt 2: Art (Deckelart + Ablaufrinne)
+                        Step(
+                          title: const Text('2. Art'),
+                          isActive: _currentStep >= 1,
+                          state: _currentStep > 1
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              // Deckelart (Gruppe)
+                              _sectionLabel('Deckelart'),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  ChoiceChip(
+                                    label: const Text('SSK Münchner Modell'),
+                                    selected: _gruppe == 'SSK Münchner Modell',
+                                    onSelected: (_) => setState(() {
+                                      _gruppe = 'SSK Münchner Modell';
+                                      _aufbauMuenchner = false;
+                                      _auspraegung = 'Normalausführung';
+                                    }),
+                                  ),
+                                  ChoiceChip(
+                                    label: const Text('Weitere Hersteller'),
+                                    selected: _gruppe == 'Weitere Hersteller',
+                                    onSelected: (_) => setState(() {
+                                      _gruppe = 'Weitere Hersteller';
+                                      _aufbauMuenchner = false;
+                                      _auspraegung = 'Passavant';
+                                    }),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              if (_gruppe == 'Weitere Hersteller') ...[
+                                _sectionLabel('Aufbau wie Münchner Modell?'),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    ChoiceChip(
+                                      label: const Text('Ja'),
+                                      selected: _aufbauMuenchner,
+                                      onSelected: (_) => setState(() {
+                                        _aufbauMuenchner = true;
+                                        _auspraegung = 'Normalausführung';
+                                      }),
+                                    ),
+                                    ChoiceChip(
+                                      label: const Text('Nein'),
+                                      selected: !_aufbauMuenchner,
+                                      onSelected: (_) => setState(() {
+                                        _aufbauMuenchner = false;
+                                        _auspraegung = 'Passavant';
+                                      }),
+                                    ),
+                                  ],
                                 ),
-                                FilterChip(
-                                  label: const Text('313 BU'),
-                                  selected: _abteilungen.contains('313 BU'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('313 BU') : _abteilungen.remove('313 BU');
-                                  }),
+                                const SizedBox(height: 12),
+                              ],
+
+                              // Ausprägung (Label abhängig von Gruppe)
+                              _sectionLabel(
+                                _gruppe == 'SSK Münchner Modell'
+                                    ? 'Aufbau'
+                                    : 'Deckelart',
+                              ),
+                              const SizedBox(height: 6),
+                              if (_gruppe == 'SSK Münchner Modell' ||
+                                  (_gruppe == 'Weitere Hersteller' &&
+                                      _aufbauMuenchner))
+                                DropdownButtonFormField<String>(
+                                  initialValue: _auspraegung,
+                                  items:
+                                      const [
+                                            'Normalausführung',
+                                            'Kurzausführung',
+                                            'Beton',
+                                            'Sifon',
+                                          ]
+                                          .map(
+                                            (d) => DropdownMenuItem(
+                                              value: d,
+                                              child: Text(d),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (v) => setState(
+                                    () =>
+                                        _auspraegung = v ?? 'Normalausführung',
+                                  ),
+                                )
+                              else
+                                DropdownButtonFormField<String>(
+                                  initialValue: _auspraegung,
+                                  items:
+                                      const [
+                                            'Passavant',
+                                            'Brückenablauf',
+                                            'Einwalzbar',
+                                            'DIN-Modell',
+                                            'Bemerkung',
+                                          ]
+                                          .map(
+                                            (d) => DropdownMenuItem(
+                                              value: d,
+                                              child: Text(
+                                                d == 'Bemerkung'
+                                                    ? 'Bemerkung (frei)'
+                                                    : d,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (v) => setState(
+                                    () => _auspraegung = v ?? 'Passavant',
+                                  ),
                                 ),
-                                FilterChip(
-                                  label: const Text('313 BauKo'),
-                                  selected: _abteilungen.contains('313 BauKo'),
-                                  onSelected: (v) => setState(() {
-                                    v ? _abteilungen.add('313 BauKo') : _abteilungen.remove('313 BauKo');
-                                  }),
+                              if (_gruppe == 'Weitere Hersteller' &&
+                                  !_aufbauMuenchner &&
+                                  _auspraegung == 'Bemerkung') ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _herstellerBemCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Hersteller/Typ (Bemerkung)',
+                                  ),
                                 ),
                               ],
-                            ),
-                          ),
-                        // ...entfernt: doppelte Abteilungs-Buttons...
 
-                        // Leitung kaputt Details (wenn aktiviert)
-                        if (_schaeden.contains('Leitung kaputt')) ...[
-                          const SizedBox(height: 20),
-                          _sectionLabel('Leitungsdetails'),
-                          const SizedBox(height: 6),
-                          if (_leitung.isEmpty)
-                            OutlinedButton.icon(
-                              onPressed: () => setState(() => _leitung.add(_LeitRow())),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Erste Zeile hinzufügen'),
-                            )
-                          else ...[
-                            ..._leitung.asMap().entries.map((e) => _leitRow(e.key)),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: OutlinedButton.icon(
-                                onPressed: () => setState(() => _leitung.add(_LeitRow())),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Weitere Zeile'),
+                              if (_gruppe == 'Weitere Hersteller' &&
+                                  _aufbauMuenchner) ...[
+                                const SizedBox(height: 12),
+                                _sectionLabel('Abdeckung *'),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String>(
+                                  initialValue: _abdeckung,
+                                  items:
+                                      const [
+                                            'Passavant',
+                                            'Brückenablauf',
+                                            'Einwalzbar',
+                                            'DIN-Modell',
+                                            'Bemerkung',
+                                          ]
+                                          .map(
+                                            (d) => DropdownMenuItem(
+                                              value: d,
+                                              child: Text(
+                                                d == 'Bemerkung'
+                                                    ? 'Bemerkung (frei)'
+                                                    : d,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (v) => setState(
+                                    () => _abdeckung = v ?? 'Passavant',
+                                  ),
+                                ),
+                                if (_abdeckung == 'Bemerkung') ...[
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _abdeckungBemCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Abdeckung (Bemerkung)',
+                                    ),
+                                  ),
+                                ],
+                              ],
+
+                              const SizedBox(height: 20),
+                              // Ablaufrinne
+                              _sectionLabel('Ablaufrinne'),
+                              const SizedBox(height: 6),
+                              CheckboxListTile(
+                                value: _ablaufrinne,
+                                onChanged: (v) => setState(() {
+                                  _ablaufrinne = v ?? false;
+                                  if (_ablaufrinne && _letztePosition != null) {
+                                    _ablaufrinneVerbindungCtrl.text =
+                                        _letztePosition!;
+                                  }
+                                }),
+                                title: const Text(
+                                  'Mit anderer Position verbinden',
+                                ),
+                                subtitle: Text(
+                                  _ablaufrinne
+                                      ? 'Ergebnis: ${_ablaufrinneVerbindungCtrl.text.trim().isEmpty ? "X" : _ablaufrinneVerbindungCtrl.text.trim()}/${_posCtrl.text.trim().isEmpty ? "Y" : _posCtrl.text.trim()}'
+                                      : 'Wenn es sich um eine Ablaufrinne handelt, die zwei Positionen verbindet (z.B. Position 2 und 5)',
+                                ),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                dense: true,
                               ),
-                            ),
-                          ],
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Schritt 4: Speichern
-                  Step(
-                    title: const Text('4. Speichern'),
-                    isActive: _currentStep >= 3,
-                    state: StepState.indexed,
-                    content: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        // Bemerkung
-                        _sectionLabel('Bemerkung'),
-                        const SizedBox(height: 6),
-                        TextField(
-                          controller: _bemCtrl,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Zusätzliche Bemerkung (optional)',
-                            hintText: 'z. B. besondere Merkmale...',
+                              if (_ablaufrinne) ...[
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: _ablaufrinneVerbindungCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: 'Position zum Verbinden *',
+                                    hintText: _letztePosition != null
+                                        ? 'z.B. $_letztePosition'
+                                        : 'z.B. 2',
+                                  ),
+                                  validator: (v) => !_ablaufrinne
+                                      ? null
+                                      : (v == null || v.trim().isEmpty
+                                            ? null
+                                            : ValidationService.validatePositionField(
+                                                v,
+                                              )),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
 
-                        const SizedBox(height: 20),
-                        // Medien
-                        _sectionLabel('Medien'),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _pickMedia,
-                              icon: const Icon(Icons.image),
-                              label: const Text('Medien'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _pickAudio,
-                              icon: const Icon(Icons.mic),
-                              label: const Text('Audio'),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _pickFolder,
-                              icon: const Icon(Icons.folder_open),
-                              label: const Text('PDF'),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                        // Schritt 3: Schäden & Abteilung
+                        Step(
+                          title: const Text('3. Schäden & Abteilung'),
+                          isActive: _currentStep >= 2,
+                          state: _currentStep > 2
+                              ? StepState.complete
+                              : StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              // Schäden
+                              _sectionLabel('Schäden'),
+                              const SizedBox(height: 6),
+                              _chipsMulti(
+                                [
+                                  'Komplett',
+                                  'Rost',
+                                  'Rahmen/Rost',
+                                  'Auflagerringe',
+                                  'Eimer',
+                                  'Mittelstück',
+                                  'Leitung kaputt',
+                                  'Reinigung/Nachbefahren',
+                                ],
+                                _schaeden,
+                                disable: _keinBefund,
+                                onToggle: (name, sel) {
+                                  if (name == 'Leitung kaputt')
+                                    _toggleLeitungKaputt(sel);
+                                },
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              FilterChip(
+                                label: Text(
+                                  'Kein Befund',
+                                  style: TextStyle(
+                                    color: _keinBefund ? Colors.green : null,
+                                  ),
+                                ),
+                                selected: _keinBefund,
+                                onSelected: (v) => setState(() {
+                                  _keinBefund = v;
+                                  if (v) {
+                                    _schaeden.clear();
+                                    _leitung.clear();
+                                  }
+                                }),
+                              ),
+
+                              const SizedBox(height: 20),
+                              // Abteilungen
+                              _sectionLabel('Abteilungen'),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: _toggle312,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _show312
+                                          ? Colors.blue
+                                          : null,
+                                    ),
+                                    child: const Text('312'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: _toggle313,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _show313
+                                          ? Colors.blue
+                                          : null,
+                                    ),
+                                    child: const Text('313'),
+                                  ),
+                                ],
+                              ),
+                              if (_show312)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      FilterChip(
+                                        label: const Text('312 IZ AR'),
+                                        selected: _abteilungen.contains(
+                                          '312 IZ AR',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 IZ AR')
+                                              : _abteilungen.remove(
+                                                  '312 IZ AR',
+                                                );
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('312 Ost'),
+                                        selected: _abteilungen.contains(
+                                          '312 Ost',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 Ost')
+                                              : _abteilungen.remove('312 Ost');
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('312 Service'),
+                                        selected: _abteilungen.contains(
+                                          '312 Service',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 Service')
+                                              : _abteilungen.remove(
+                                                  '312 Service',
+                                                );
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('312 West'),
+                                        selected: _abteilungen.contains(
+                                          '312 West',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('312 West')
+                                              : _abteilungen.remove('312 West');
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (_show313)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      FilterChip(
+                                        label: const Text('313 TU'),
+                                        selected: _abteilungen.contains(
+                                          '313 TU',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('313 TU')
+                                              : _abteilungen.remove('313 TU');
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('313 BU'),
+                                        selected: _abteilungen.contains(
+                                          '313 BU',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('313 BU')
+                                              : _abteilungen.remove('313 BU');
+                                        }),
+                                      ),
+                                      FilterChip(
+                                        label: const Text('313 BauKo'),
+                                        selected: _abteilungen.contains(
+                                          '313 BauKo',
+                                        ),
+                                        onSelected: (v) => setState(() {
+                                          v
+                                              ? _abteilungen.add('313 BauKo')
+                                              : _abteilungen.remove(
+                                                  '313 BauKo',
+                                                );
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              // ...entfernt: doppelte Abteilungs-Buttons...
+
+                              // Leitung kaputt Details (wenn aktiviert)
+                              if (_schaeden.contains('Leitung kaputt')) ...[
+                                const SizedBox(height: 20),
+                                _sectionLabel('Leitungsdetails'),
+                                const SizedBox(height: 6),
+                                if (_leitung.isEmpty)
+                                  OutlinedButton.icon(
+                                    onPressed: () => setState(
+                                      () => _leitung.add(_LeitRow()),
+                                    ),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Erste Zeile hinzufügen'),
+                                  )
+                                else ...[
+                                  ..._leitung.asMap().entries.map(
+                                    (e) => _leitRow(e.key),
+                                  ),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => setState(
+                                        () => _leitung.add(_LeitRow()),
+                                      ),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Weitere Zeile'),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Chip(label: Text('📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}')),
+
+                        // Schritt 4: Speichern
+                        Step(
+                          title: const Text('4. Speichern'),
+                          isActive: _currentStep >= 3,
+                          state: StepState.indexed,
+                          content: ListView(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              // Bemerkung
+                              _sectionLabel('Bemerkung'),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: _bemCtrl,
+                                maxLines: 3,
+                                decoration: const InputDecoration(
+                                  labelText: 'Zusätzliche Bemerkung (optional)',
+                                  hintText: 'z. B. besondere Merkmale...',
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+                              // Medien
+                              _sectionLabel('Medien'),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: _pickMedia,
+                                    icon: const Icon(Icons.image),
+                                    label: const Text('Medien'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _pickAudio,
+                                    icon: const Icon(Icons.mic),
+                                    label: const Text('Audio'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _pickFolder,
+                                    icon: const Icon(Icons.folder_open),
+                                    label: const Text('PDF'),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: Colors.blue.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Chip(
+                                label: Text(
+                                  '📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1285,51 +1495,65 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     final row = _leitung[i];
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(children: [
-        SizedBox(
-          width: 120,
-          child: TextField(
-            controller: row.mCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Länge (m)  z. B. 1,50'),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 120,
+            child: TextField(
+              controller: row.mCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Länge (m)  z. B. 1,50',
+              ),
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        DropdownButton<String>(
-          value: row.art,
-          items: _leitungArten.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
-          onChanged: (v) => setState(() => row.art = v ?? _leitungArten.first),
-        ),
-        const Spacer(),
-        IconButton(
-          onPressed: () => setState(() => _leitung.removeAt(i)),
-          icon: const Icon(Icons.delete_outline),
-          tooltip: 'Zeile entfernen',
-        )
-      ]),
+          const SizedBox(width: 8),
+          DropdownButton<String>(
+            value: row.art,
+            items: _leitungArten
+                .map((a) => DropdownMenuItem(value: a, child: Text(a)))
+                .toList(),
+            onChanged: (v) =>
+                setState(() => row.art = v ?? _leitungArten.first),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: () => setState(() => _leitung.removeAt(i)),
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Zeile entfernen',
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _chipsMulti(List<String> items, Set<String> target, {bool disable = false, void Function(String, bool)? onToggle}) => Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: items
-            .map((name) => FilterChip(
-                  label: Text(name),
-                  selected: target.contains(name),
-                  onSelected: disable
-                      ? null
-                      : (v) => setState(() {
-                            if (v) {
-                              target.add(name);
-                            } else {
-                              target.remove(name);
-                            }
-                            if (onToggle != null) onToggle(name, v);
-                          }),
-                ))
-            .toList(),
-      );
+  Widget _chipsMulti(
+    List<String> items,
+    Set<String> target, {
+    bool disable = false,
+    void Function(String, bool)? onToggle,
+  }) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: items
+        .map(
+          (name) => FilterChip(
+            label: Text(name),
+            selected: target.contains(name),
+            onSelected: disable
+                ? null
+                : (v) => setState(() {
+                    if (v) {
+                      target.add(name);
+                    } else {
+                      target.remove(name);
+                    }
+                    if (onToggle != null) onToggle(name, v);
+                  }),
+          ),
+        )
+        .toList(),
+  );
 
   Widget _label(String t) => FieldLabel(t);
 
@@ -1356,11 +1580,12 @@ class _LeitRow {
   final TextEditingController mCtrl;
   String art;
 
-  _LeitRow({String meter = '', this.art = 'Scherbe'}) : mCtrl = TextEditingController(text: meter);
-  
+  _LeitRow({String meter = '', this.art = 'Scherbe'})
+    : mCtrl = TextEditingController(text: meter);
+
   String get meter => mCtrl.text.replaceAll(',', '.');
   Map<String, String> toJson() => {'meter': meter, 'art': art};
-  
+
   factory _LeitRow.fromJson(Map<String, dynamic> json) {
     return _LeitRow(
       meter: (json['meter'] as String?) ?? '',

@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SpeicherService {
   static const String _syncStatusPending = 'pending';
   static const String _syncStatusPendingDelete = 'pending_delete';
+  static const String _objectKeyPrefix = 'obj_';
+  static const String _prefsWebPrefix = 'flutter.';
   static const String _deleteTombstonePrefix = 'deleted_obj_';
   static const List<String> _mediaFields = <String>[
     'mediaFotos',
@@ -17,8 +19,31 @@ class SpeicherService {
     'mediaPdfs',
   ];
 
+  static String _logicalPrefsKey(String key) {
+    if (key.startsWith(_prefsWebPrefix)) {
+      return key.substring(_prefsWebPrefix.length);
+    }
+    final objectMarker = '.$_objectKeyPrefix';
+    final objectMarkerIndex = key.indexOf(objectMarker);
+    if (objectMarkerIndex >= 0) {
+      return key.substring(objectMarkerIndex + 1);
+    }
+    return key;
+  }
+
+  static bool _isObjectKey(String key) {
+    return _logicalPrefsKey(key).startsWith(_objectKeyPrefix);
+  }
+
+  static bool _objectKeyStartsWith(String key, String prefix) {
+    return _logicalPrefsKey(key).startsWith(prefix);
+  }
+
   /// Lädt alle Einträge für eine bestimmte EVNr aus SharedPreferences
-  static Future<List<Map<String, dynamic>>> ladeEintraegeFuerEvNr(String evnr, {String? strasse}) async {
+  static Future<List<Map<String, dynamic>>> ladeEintraegeFuerEvNr(
+    String evnr, {
+    String? strasse,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final results = <Map<String, dynamic>>[];
 
@@ -34,8 +59,9 @@ class SpeicherService {
             final keyPrefix = 'obj_${evnr}_${strasse}_$pos';
             final matchingKeys = prefs.getKeys().where((key) {
               if (seenKeys.contains(key)) return false;
-              if (key == keyPrefix) return true;
-              return key.startsWith('${keyPrefix}_');
+              final logicalKey = _logicalPrefsKey(key);
+              if (logicalKey == keyPrefix) return true;
+              return logicalKey.startsWith('${keyPrefix}_');
             }).toList();
 
             for (final candidateKey in matchingKeys) {
@@ -56,12 +82,13 @@ class SpeicherService {
           // Index missing or empty: fall back to full scan to be robust
           final keys = prefs.getKeys();
           for (final key in keys) {
-            if (key.startsWith('obj_$evnr')) {
+            if (_objectKeyStartsWith(key, 'obj_$evnr')) {
               try {
                 final jsonStr = prefs.getString(key);
                 if (jsonStr != null) {
                   final meta = jsonDecode(jsonStr) as Map<String, dynamic>;
-                  meta['storageKey'] = key; // Speichere den Key für spätere Updates
+                  meta['storageKey'] =
+                      key; // Speichere den Key für spätere Updates
                   results.add(meta);
                 }
               } catch (e) {
@@ -77,7 +104,7 @@ class SpeicherService {
       // No street provided: full scan (backwards compatible behaviour)
       final keys = prefs.getKeys();
       for (final key in keys) {
-        if (key.startsWith('obj_$evnr')) {
+        if (_objectKeyStartsWith(key, 'obj_$evnr')) {
           try {
             final jsonStr = prefs.getString(key);
             if (jsonStr != null) {
@@ -91,71 +118,61 @@ class SpeicherService {
         }
       }
     }
-    
+
     // Sortiere nach Positionsnummer
     results.sort((a, b) {
       final posA = a['posNr'] as String? ?? '';
       final posB = b['posNr'] as String? ?? '';
       return _comparePositions(posA, posB);
     });
-    
+
     // Stelle sicher, dass jeder Eintrag eine posNr hat - für ältere Daten ohne posNr
     for (var i = 0; i < results.length; i++) {
       final entry = results[i];
       final posNr = entry['posNr'] as String? ?? '';
       if (posNr.isEmpty) {
-        debugPrint('[ladeEintraegeFuerEvNr] WARNUNG: Eintrag ohne posNr gefunden, setze auf Index.');
+        debugPrint(
+          '[ladeEintraegeFuerEvNr] WARNUNG: Eintrag ohne posNr gefunden, setze auf Index.',
+        );
         entry['posNr'] = (i + 1).toString();
       }
     }
-    
+
     return results;
   }
-  
+
   /// Lädt alle vorhandenen EVNr aus SharedPreferences
   static Future<List<String>> ladeAlleEvNr() async {
     final prefs = await SharedPreferences.getInstance();
     final keys = prefs.getKeys();
     final evFromObjects = <String>{};
-    
-    // 1. EVNr aus gespeicherten Einträgen (obj_*)
+
+    // Schneller Start: Fuer die EVNr-Liste reicht der Speicher-Key.
+    // Die Objekt-JSONs koennen gross sein, weil Medien darin stecken.
     for (final key in keys) {
-      try {
-        if (key.startsWith('obj_')) {
-          // Key format: obj_<evnr>_<rest...>
-          final parts = key.split('_');
-          if (parts.length >= 2) {
-            final evnr = parts[1];
-            // Prüfe, ob der Eintrag gültig ist
-            final jsonStr = prefs.getString(key);
-            if (jsonStr != null && jsonStr.isNotEmpty) {
-              try {
-                jsonDecode(jsonStr);
-                evFromObjects.add(evnr);
-              } catch (_) {
-                // Ungültiges JSON, ignorieren
-              }
-            }
-          }
-        }
-      } catch (_) {
-        // Fehler beim Verarbeiten von Key, ignorieren
+      final logicalKey = _logicalPrefsKey(key);
+      if (!logicalKey.startsWith(_objectKeyPrefix)) continue;
+      final parts = logicalKey.split('_');
+      if (parts.length < 2) continue;
+      final evnr = parts[1].trim();
+      if (evnr.isNotEmpty) {
+        evFromObjects.add(evnr);
       }
     }
 
-    // 2. EVNr aus recent_evnr nur behalten, wenn noch Einträge existieren
     final recentEvNr = prefs.getStringList('recent_evnr') ?? <String>[];
-    final cleanedRecent = recentEvNr.where((evnr) => evnr.trim().isNotEmpty && evFromObjects.contains(evnr)).toList();
+    final cleanedRecent = recentEvNr
+        .where((evnr) => evnr.trim().isNotEmpty && evFromObjects.contains(evnr))
+        .toList();
     if (cleanedRecent.length != recentEvNr.length) {
       await prefs.setStringList('recent_evnr', cleanedRecent);
     }
 
-    // Ergebnis: nur EVNr mit vorhandenen Objekten
     final list = evFromObjects.toList();
     list.sort();
     return list;
   }
-  
+
   /// Aktualisiert einen Eintrag in SharedPreferences
   static Future<void> updateEntry(String key, Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
@@ -169,7 +186,11 @@ class SpeicherService {
       oldMeta = null;
     }
 
-    final toStore = _withSyncState(Map<String, dynamic>.from(data), oldMeta: oldMeta, key: key);
+    final toStore = _withSyncState(
+      Map<String, dynamic>.from(data),
+      oldMeta: oldMeta,
+      key: key,
+    );
     await prefs.setString(key, jsonEncode(toStore));
   }
 
@@ -200,7 +221,11 @@ class SpeicherService {
     }
 
     // Ensure we store the storageKey on the saved meta
-    final toStore = _withSyncState(Map<String, dynamic>.from(data), oldMeta: oldMeta, key: key);
+    final toStore = _withSyncState(
+      Map<String, dynamic>.from(data),
+      oldMeta: oldMeta,
+      key: key,
+    );
 
     await prefs.setString(key, jsonEncode(toStore));
 
@@ -231,7 +256,7 @@ class SpeicherService {
       debugPrint('Fehler beim Aktualisieren des Positionsindex: $e');
     }
   }
-  
+
   /// Löscht einen Eintrag aus SharedPreferences
   static Future<void> deleteEntry(String key) async {
     final prefs = await SharedPreferences.getInstance();
@@ -350,15 +375,24 @@ class SpeicherService {
       final rawGps = source['gps'];
       if (rawGps is Map) {
         final gpsMap = Map<String, dynamic>.from(rawGps);
-        final lat = toDoubleValue(gpsMap['lat'] ?? gpsMap['latitude'] ?? gpsMap['gpsLat']);
-        final lon = toDoubleValue(gpsMap['lon'] ?? gpsMap['lng'] ?? gpsMap['gpsLon']);
+        final lat = toDoubleValue(
+          gpsMap['lat'] ?? gpsMap['latitude'] ?? gpsMap['gpsLat'],
+        );
+        final lon = toDoubleValue(
+          gpsMap['lon'] ?? gpsMap['lng'] ?? gpsMap['gpsLon'],
+        );
         if (lat == null || lon == null) return null;
 
         return <String, dynamic>{
           'lat': lat,
           'lon': lon,
-          if (toNumValue(gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy']) != null)
-            'accuracy_m': toNumValue(gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy']),
+          if (toNumValue(
+                gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy'],
+              ) !=
+              null)
+            'accuracy_m': toNumValue(
+              gpsMap['accuracy_m'] ?? gpsMap['acc'] ?? gpsMap['accuracy'],
+            ),
           'ts': (gpsMap['ts'] as String?) ?? nowIso,
         };
       }
@@ -370,7 +404,8 @@ class SpeicherService {
       return <String, dynamic>{
         'lat': lat,
         'lon': lon,
-        if (toNumValue(source['gpsAcc']) != null) 'accuracy_m': toNumValue(source['gpsAcc']),
+        if (toNumValue(source['gpsAcc']) != null)
+          'accuracy_m': toNumValue(source['gpsAcc']),
         'ts': (source['gpsTs'] as String?) ?? nowIso,
       };
     }
@@ -387,7 +422,9 @@ class SpeicherService {
     required String key,
     required String nowIso,
   }) {
-    final existingBindings = _groupBindingsByFieldAndValue(oldMeta?['mediaBindings']);
+    final existingBindings = _groupBindingsByFieldAndValue(
+      oldMeta?['mediaBindings'],
+    );
     final nextBindings = <Map<String, dynamic>>[];
     final activeBindingIds = <String>{};
 
@@ -399,8 +436,11 @@ class SpeicherService {
         final value = values[index];
         final bindingKey = '$field\u0000$value';
         final reusable = existingBindings[bindingKey];
-        final existing = reusable != null && reusable.isNotEmpty ? reusable.removeAt(0) : null;
-        final bindingId = _stringValue(existing?['id']) ?? _newMediaBindingId(field, index);
+        final existing = reusable != null && reusable.isNotEmpty
+            ? reusable.removeAt(0)
+            : null;
+        final bindingId =
+            _stringValue(existing?['id']) ?? _newMediaBindingId(field, index);
 
         nextBindings.add(<String, dynamic>{
           'id': bindingId,
@@ -432,7 +472,9 @@ class SpeicherService {
     toStore['deletedMediaBindingIds'] = deletedBindingIds.toList()..sort();
   }
 
-  static Map<String, List<Map<String, dynamic>>> _groupBindingsByFieldAndValue(dynamic rawBindings) {
+  static Map<String, List<Map<String, dynamic>>> _groupBindingsByFieldAndValue(
+    dynamic rawBindings,
+  ) {
     final grouped = <String, List<Map<String, dynamic>>>{};
 
     if (rawBindings is! List) {
@@ -452,7 +494,9 @@ class SpeicherService {
       }
 
       final bindingKey = '$field\u0000$value';
-      grouped.putIfAbsent(bindingKey, () => <Map<String, dynamic>>[]).add(binding);
+      grouped
+          .putIfAbsent(bindingKey, () => <Map<String, dynamic>>[])
+          .add(binding);
     }
 
     return grouped;
@@ -460,7 +504,10 @@ class SpeicherService {
 
   static List<String> _normalizeMediaValues(dynamic rawValues) {
     if (rawValues is List) {
-      return rawValues.map((value) => value.toString().trim()).where((value) => value.isNotEmpty).toList();
+      return rawValues
+          .map((value) => value.toString().trim())
+          .where((value) => value.isNotEmpty)
+          .toList();
     }
 
     if (rawValues is String) {
@@ -476,7 +523,10 @@ class SpeicherService {
       return <String>[];
     }
 
-    return rawValues.map((value) => value.toString().trim()).where((value) => value.isNotEmpty).toList();
+    return rawValues
+        .map((value) => value.toString().trim())
+        .where((value) => value.isNotEmpty)
+        .toList();
   }
 
   static String _mediaKindForField(String field) {
@@ -508,14 +558,15 @@ class SpeicherService {
 
   /// Lädt alle ausstehenden Sync-Änderungen (pending oder pending_delete)
   /// grouped by EVNr für Batch-Übertragung oder Konflikt-Erkennung.
-  static Future<Map<String, List<Map<String, dynamic>>>> loadPendingSyncChanges() async {
+  static Future<Map<String, List<Map<String, dynamic>>>>
+  loadPendingSyncChanges() async {
     final prefs = await SharedPreferences.getInstance();
     final byEvNr = <String, List<Map<String, dynamic>>>{};
 
     final keys = prefs.getKeys().toList();
 
     for (final key in keys) {
-      if (key.startsWith('obj_')) {
+      if (_isObjectKey(key)) {
         try {
           final jsonStr = prefs.getString(key);
           if (jsonStr != null) {
@@ -525,7 +576,9 @@ class SpeicherService {
               final evnr = meta['evnr'] as String?;
               if (evnr != null) {
                 meta['storageKey'] = key;
-                byEvNr.putIfAbsent(evnr, () => <Map<String, dynamic>>[]).add(meta);
+                byEvNr
+                    .putIfAbsent(evnr, () => <Map<String, dynamic>>[])
+                    .add(meta);
               }
             }
           }
@@ -539,7 +592,9 @@ class SpeicherService {
             if (syncStatus == _syncStatusPendingDelete) {
               final evnr = tombstone['evnr'] as String?;
               if (evnr != null) {
-                byEvNr.putIfAbsent(evnr, () => <Map<String, dynamic>>[]).add(tombstone);
+                byEvNr
+                    .putIfAbsent(evnr, () => <Map<String, dynamic>>[])
+                    .add(tombstone);
               }
             }
           }
@@ -573,8 +628,7 @@ class SpeicherService {
       final meta = jsonDecode(jsonStr) as Map<String, dynamic>;
       meta['syncRetryCount'] = retryCount;
       meta['lastSyncError'] = error;
-      meta['nextRetryAfter'] =
-          DateTime.now().add(backoff).toIso8601String();
+      meta['nextRetryAfter'] = DateTime.now().add(backoff).toIso8601String();
       await prefs.setString(key, jsonEncode(meta));
     } catch (e) {
       debugPrint('markSyncError für $key fehlgeschlagen: $e');
@@ -586,7 +640,8 @@ class SpeicherService {
   /// Sync-Versuch.
   ///
   /// Das Ergebnis ist nach EVNr gruppiert, analog zu [loadPendingSyncChanges].
-  static Future<Map<String, List<Map<String, dynamic>>>> loadReadyToRetry() async {
+  static Future<Map<String, List<Map<String, dynamic>>>>
+  loadReadyToRetry() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final byEvNr = <String, List<Map<String, dynamic>>>{};
@@ -594,7 +649,7 @@ class SpeicherService {
     final keys = prefs.getKeys().toList();
 
     for (final key in keys) {
-      final isObj = key.startsWith('obj_');
+      final isObj = _isObjectKey(key);
       final isTombstone = key.startsWith(_deleteTombstonePrefix);
       if (!isObj && !isTombstone) continue;
 
@@ -641,10 +696,9 @@ class SpeicherService {
     int retentionDays = 30,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final cutoffTime = DateTime.now().subtract(Duration(days: retentionDays));
 
     for (final key in syncedKeys) {
-      if (key.startsWith('obj_')) {
+      if (_isObjectKey(key)) {
         try {
           final jsonStr = prefs.getString(key);
           if (jsonStr != null) {
@@ -669,6 +723,7 @@ class SpeicherService {
       }
     }
 
+    final cutoffTime = DateTime.now().subtract(Duration(days: retentionDays));
     final allKeys = prefs.getKeys().toList();
     for (final key in allKeys) {
       if (key.startsWith(_deleteTombstonePrefix)) {
@@ -681,7 +736,8 @@ class SpeicherService {
 
             if (syncStatus == 'synced' && lastSyncedAt != null) {
               final syncedDateTime = DateTime.tryParse(lastSyncedAt);
-              if (syncedDateTime != null && !syncedDateTime.isAfter(cutoffTime)) {
+              if (syncedDateTime != null &&
+                  !syncedDateTime.isAfter(cutoffTime)) {
                 await prefs.remove(key);
               }
             }
@@ -695,9 +751,9 @@ class SpeicherService {
   static Future<void> deleteAllForEvNr(String evnr) async {
     final prefs = await SharedPreferences.getInstance();
     var keys = prefs.getKeys();
-    
+
     final keysToDelete = keys.where((key) {
-      if (!key.startsWith('obj_')) return false;
+      if (!_isObjectKey(key)) return false;
       try {
         final jsonStr = prefs.getString(key);
         if (jsonStr == null) return false;
@@ -721,9 +777,11 @@ class SpeicherService {
 
     // Aktualisiere keys nach dem Löschen
     keys = prefs.getKeys();
-    
+
     // Bereinige auch alle pos_index_ Einträge für diese EVNr
-    final indexKeys = keys.where((key) => key.startsWith('pos_index_$evnr')).toList();
+    final indexKeys = keys
+        .where((key) => _logicalPrefsKey(key).startsWith('pos_index_$evnr'))
+        .toList();
     debugPrint('[deleteAllForEvNr] Lösche ${indexKeys.length} Index-Keys');
     for (final indexKey in indexKeys) {
       await prefs.remove(indexKey);
@@ -736,27 +794,27 @@ class SpeicherService {
       await prefs.setStringList('recent_evnr', recent);
     }
   }
-  
+
   /// Vergleicht Positionsnummern (z.B. "1", "1a", "2", "10")
   static int _comparePositions(String a, String b) {
     final regExp = RegExp(r'^(\d+)([a-zA-Z]?)$');
     final matchA = regExp.firstMatch(a);
     final matchB = regExp.firstMatch(b);
-    
+
     if (matchA == null && matchB == null) return a.compareTo(b);
     if (matchA == null) return 1;
     if (matchB == null) return -1;
-    
+
     final numA = int.tryParse(matchA.group(1)!) ?? 0;
     final numB = int.tryParse(matchB.group(1)!) ?? 0;
-    
+
     if (numA != numB) return numA.compareTo(numB);
-    
+
     final letterA = matchA.group(2) ?? '';
     final letterB = matchB.group(2) ?? '';
     return letterA.compareTo(letterB);
   }
-  
+
   /// Konvertiert ein Meta-Objekt zu einem BaseEntry (für Kompatibilität)
   // metaToBaseEntry entfernt: export-from-meta APIs verwenden intern eine
   // lokale Konvertierung oder arbeiten direkt mit den Meta-Feldern.
@@ -764,18 +822,39 @@ class SpeicherService {
   /// Hilfsmethode: Erzeuge eine Feld-Map für Export/Steckbrief direkt aus
   /// dem gespeicherten Meta-JSON. Diese Map kann an
   /// `ExportService.buildEinzelFromFields` übergeben werden.
-  static Map<String, String> metaToFields(Map<String, dynamic> meta, {String? erfasser, String? strasse, String? wetter}) {
-    final typ = (meta['typ'] as String?)?.trim() ?? 'DIV';
+  static Map<String, String> metaToFields(
+    Map<String, dynamic> meta, {
+    String? erfasser,
+    String? strasse,
+    String? wetter,
+  }) {
+    final rawTyp = (meta['typ'] as String?)?.trim() ?? 'DIV';
+    final upperTyp = rawTyp.toUpperCase();
+    final typ =
+        (upperTyp == 'VS' ||
+            upperTyp == 'VG' ||
+            upperTyp == 'G' ||
+            upperTyp.contains('SICKERGRUBE') ||
+            upperTyp.contains('GRUBE'))
+        ? 'VG'
+        : upperTyp;
 
     String listToText(dynamic v) {
       if (v == null) return '';
       if (v is List) {
-        return v.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(', ');
+        return v
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .join(', ');
       }
       if (v is String) {
         final s = v.trim();
         if (s.isEmpty) return '';
-        return s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).join(', ');
+        return s
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .join(', ');
       }
       return v.toString().trim();
     }
@@ -839,7 +918,12 @@ class SpeicherService {
           ? (meta['erfasser'] as String)
           : (erfasser ?? '—'),
       'Datum/Zeit': meta['zeitIso'] != null ? (meta['zeitIso'] as String) : '—',
-      'Wetter': formatWeather(meta['wetter'] as String?, meta['temperatur'] as String?) ?? (wetter ?? '—'),
+      'Wetter':
+          formatWeather(
+            meta['wetter'] as String?,
+            meta['temperatur'] as String?,
+          ) ??
+          (wetter ?? '—'),
       'Verfügbarkeit': listToText(meta['verfuegbarkeit']),
       'Status vor Ort': listToText(meta['statusVorOrt']),
       'Abteilungen': abteilungenText(),
@@ -863,11 +947,13 @@ class SpeicherService {
       putIfFilled('Eingang', meta['eingang']);
       // Einsteigart (Alt/Neu bei Steigeisen)
       final einsteigart = (meta['einsteigart'] as String?)?.trim() ?? '';
-      final steigeisenStand = (meta['steigeisenStand'] as String?)?.trim() ?? '';
+      final steigeisenStand =
+          (meta['steigeisenStand'] as String?)?.trim() ?? '';
       if (einsteigart.isNotEmpty) {
-        fields['Einsteigart'] = (einsteigart == 'Steigeisen' && steigeisenStand.isNotEmpty)
-        ? 'Steigeisen – $steigeisenStand'
-        : einsteigart;
+        fields['Einsteigart'] =
+            (einsteigart == 'Steigeisen' && steigeisenStand.isNotEmpty)
+            ? 'Steigeisen – $steigeisenStand'
+            : einsteigart;
       }
       // Für PDF auch explizit den Stand der Steigeisen mitgeben (Alt/Neu)
       if (einsteigart == 'Steigeisen' && steigeisenStand.isNotEmpty) {
@@ -879,13 +965,17 @@ class SpeicherService {
       final keinBefund = meta['keinBefund'] == true;
       final rawSchaeden = meta['schaeden'];
       final schaedenList = rawSchaeden is List
-          ? rawSchaeden.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList()
+          ? rawSchaeden
+                .map((e) => e.toString().trim())
+                .where((e) => e.isNotEmpty)
+                .toList()
           : (rawSchaeden is String
-              ? rawSchaeden.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
-              : <String>[]);
-      if (schaedenList.contains('1. Steigeisen entfernen') && schaedenList.contains('Leiter einbauen')) {
-        schaedenList.add('Leiter einbau möglich');
-      }
+                ? rawSchaeden
+                      .split(',')
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toList()
+                : <String>[]);
       final schaedenText = schaedenList.join(', ');
       if (keinBefund) {
         fields['Schäden'] = 'Kein Befund';
@@ -906,7 +996,6 @@ class SpeicherService {
       putIfFilled('Übergangsplatte (Höhe)', meta['uebergangsBem']);
 
       // Maße (nur wenn RF aktiv gespeichert wurde – Screen speichert sonst "")
-      putIfFilled('815', meta['mAusgleich']);
       putIfFilled('1. Steigeisen – Steighöhe', meta['st1Hoehe']);
       putIfFilled('1. Steigeisen – Rückenfreiheit', meta['st1Rf']);
       putIfFilled('2. Steigeisen – Steighöhe', meta['st2Hoehe']);
@@ -924,7 +1013,7 @@ class SpeicherService {
       if (idNr != null && idNr.isNotEmpty) {
         fields['ID-Nummer'] = idNr;
       }
-      
+
       // Deckelart aus 'sskTyp' oder aus Gruppe/Ausprägung ableiten
       String? sskTyp = (meta['sskTyp'] as String?)?.trim();
       if (sskTyp == null || sskTyp.isEmpty) {
@@ -937,7 +1026,8 @@ class SpeicherService {
             // Ausprägung kann "Bemerkung: <Text>" sein
             if (auspr.toLowerCase().startsWith('bemerkung:')) {
               final txt = auspr.substring('Bemerkung:'.length).trim();
-              sskTyp = 'Weitere Hersteller – ${txt.isEmpty ? 'Bemerkung' : txt}';
+              sskTyp =
+                  'Weitere Hersteller – ${txt.isEmpty ? 'Bemerkung' : txt}';
             } else {
               sskTyp = 'Weitere Hersteller – $auspr';
             }
@@ -968,14 +1058,14 @@ class SpeicherService {
       putIfFilled('Wasserstand (cm)', meta['wasser_cm']);
     }
 
-    // ---------------- VS / Grube ----------------
-    if (typ == 'VS' || typ == 'G') {
-      // ID-Nummer für VS/Grube
+    // ---------------- VG / Grube ----------------
+    if (typ == 'VG' || typ == 'VS' || typ == 'G') {
+      // ID-Nummer für VG/Grube
       final idNr = (meta['idNr'] as String?)?.trim();
       if (idNr != null && idNr.isNotEmpty) {
         fields['ID-Nummer'] = idNr;
       }
-      
+
       // Schäden/Kein Befund aufnehmen
       final keinBefund = meta['keinBefund'] == true;
       final schaedenText = listToText(meta['schaeden']);
@@ -983,6 +1073,21 @@ class SpeicherService {
         fields['Schäden'] = 'Kein Befund';
       } else if (schaedenText.isNotEmpty) {
         fields['Schäden'] = schaedenText;
+      }
+
+      putIfFilled('Grubentyp', meta['grubentyp'] ?? meta['grubenart']);
+      putIfFilled('Grubenart', meta['grubentyp'] ?? meta['grubenart']);
+      putIfFilled('Deckelart', meta['deckel']);
+      putIfFilled('KL', meta['kl']);
+      putIfFilled('Baujahr', meta['baujahr']);
+      putIfFilled(
+        'Filtersand Eigenschaften',
+        listToText(meta['filtersandEigensch']),
+      );
+      if (meta['filtersandJa'] is bool) {
+        putIfFilled('Filtersand', meta['filtersandJa'] == true ? 'Ja' : 'Nein');
+      } else {
+        putIfFilled('Filtersand', meta['filtersand']);
       }
     }
 
@@ -993,7 +1098,7 @@ class SpeicherService {
       if (idNr != null && idNr.isNotEmpty) {
         fields['ID-Nummer'] = idNr;
       }
-      
+
       // Schäden/Kein Befund aufnehmen
       final keinBefund = meta['keinBefund'] == true;
       final schaedenText = listToText(meta['schaeden']);
@@ -1002,12 +1107,20 @@ class SpeicherService {
       } else if (schaedenText.isNotEmpty) {
         fields['Schäden'] = schaedenText;
       }
-      
-      // Für Lüftung: Deckelart = Art (Alt/Neu), Aufbau = Art, KL nur wenn gesetzt
+
+      // Fuer Lueftung: Deckelart = echter Deckel bei Neu, Aufbau = Alt/Neu.
       if (typ == 'LÜ') {
-        final art = (meta['art'] as String?)?.trim() ?? (meta['typ_detail'] as String?)?.trim() ?? '';
-        if (art.isNotEmpty) {
+        final art =
+            (meta['art'] as String?)?.trim() ??
+            (meta['typ_detail'] as String?)?.trim() ??
+            '';
+        final deckel = (meta['deckel'] as String?)?.trim() ?? '';
+        if (deckel.isNotEmpty) {
+          fields['Deckelart'] = deckel;
+        } else if (art.isNotEmpty) {
           fields['Deckelart'] = art;
+        }
+        if (art.isNotEmpty) {
           fields['Aufbau'] = art;
         }
         final kl = (meta['kl'] as String?)?.trim();
@@ -1015,14 +1128,14 @@ class SpeicherService {
           fields['KL'] = kl;
         }
       }
-      
+
       // Für Schieber: Typ und Zustand
       if (typ == 'SK') {
         final td = (meta['typ_detail'] as String?)?.trim();
         final zustand = (meta['zustand'] as String?)?.trim();
         if (td != null && td.isNotEmpty) fields['Typ'] = td;
         if (zustand != null && zustand.isNotEmpty) fields['Zustand'] = zustand;
-        
+
         // Austausch erforderlich
         final austausch = meta['austauschErforderlich'] == true;
         if (austausch) {
@@ -1055,7 +1168,8 @@ class SpeicherService {
       final titel = (meta['titel'] as String?)?.trim();
       final beschreibung = (meta['beschreibung'] as String?)?.trim();
       if (titel != null && titel.isNotEmpty) putIfFilled('Titel', titel);
-      if (beschreibung != null && beschreibung.isNotEmpty) putIfFilled('Beschreibung', beschreibung);
+      if (beschreibung != null && beschreibung.isNotEmpty)
+        putIfFilled('Beschreibung', beschreibung);
 
       final keinBefund = meta['keinBefund'] == true;
       final schaedenText = listToText(meta['schaeden']);
@@ -1072,17 +1186,17 @@ class SpeicherService {
       }
     }
 
-    // ---------- Grube/VS (nur wenn es wirklich VS ist) ----------
+    // ---------- Grube/VG (nur wenn es wirklich Grube ist) ----------
     final grubeMap = <String, String>{};
     void put(String key, dynamic val) {
       final s = (val ?? '').toString().trim();
       if (s.isNotEmpty) grubeMap[key] = s;
     }
 
-    if (typ == 'VS' && meta['grube'] is Map) {
+    if ((typ == 'VG' || typ == 'VS') && meta['grube'] is Map) {
       final gm = Map<String, dynamic>.from(meta['grube'] as Map);
       gm.forEach((k, v) => put(k.toString(), v));
-    } else if (typ == 'VS') {
+    } else if (typ == 'VG' || typ == 'VS') {
       // Fallback: direkte Felder
       put('Grubentyp', meta['grubentyp']);
 
@@ -1097,7 +1211,9 @@ class SpeicherService {
       } else if (tiefeMRaw != null && tiefeMRaw.isNotEmpty) {
         final mVal = num.tryParse(tiefeMRaw.replaceAll(',', '.'));
         if (mVal != null) {
-          final cm = (mVal * 100).toStringAsFixed(mVal.truncateToDouble() == mVal ? 0 : 2);
+          final cm = (mVal * 100).toStringAsFixed(
+            mVal.truncateToDouble() == mVal ? 0 : 2,
+          );
           put('Grubentiefe (cm)', cm);
           grubeMap['tiefe_cm'] = cm;
         }
@@ -1111,21 +1227,42 @@ class SpeicherService {
       } else if (wasserMRaw != null && wasserMRaw.isNotEmpty) {
         final mVal2 = num.tryParse(wasserMRaw.replaceAll(',', '.'));
         if (mVal2 != null) {
-          final cm2 = (mVal2 * 100).toStringAsFixed(mVal2.truncateToDouble() == mVal2 ? 0 : 2);
+          final cm2 = (mVal2 * 100).toStringAsFixed(
+            mVal2.truncateToDouble() == mVal2 ? 0 : 2,
+          );
           put('Wasserstand (cm)', cm2);
           grubeMap['wasser_cm'] = cm2;
         }
       }
 
       final anschlussJa = meta['anschlussJa'] == true;
-      final anschlussRaw = (meta['anschluss'] ?? '').toString().trim().toLowerCase();
-      final hasAnschluss = anschlussJa || anschlussRaw == 'ja' || anschlussRaw == 'nein';
+      final anschlussRaw = (meta['anschluss'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      final hasAnschluss =
+          anschlussJa || anschlussRaw == 'ja' || anschlussRaw == 'nein';
       if (hasAnschluss) {
-        put('Anschluss am Kanal', anschlussJa || anschlussRaw == 'ja' ? 'Ja' : 'Nein');
+        put(
+          'Anschluss am Kanal',
+          anschlussJa || anschlussRaw == 'ja' ? 'Ja' : 'Nein',
+        );
+        grubeMap['anschluss'] = anschlussJa || anschlussRaw == 'ja'
+            ? 'Ja'
+            : 'Nein';
       }
       if (anschlussJa || anschlussRaw == 'ja') {
         put('Überlauf', meta['teller']);
+        put('teller', meta['teller']);
       }
+
+      if (meta['filtersandJa'] is bool) {
+        put('Filtersand', meta['filtersandJa'] == true ? 'Ja' : 'Nein');
+      } else {
+        put('Filtersand', meta['filtersand']);
+      }
+      put('Filtersand Eigenschaften', listToText(meta['filtersandEigensch']));
+      put('Baujahr', meta['baujahr']);
     }
 
     // Merge into fields (human-readable keys)

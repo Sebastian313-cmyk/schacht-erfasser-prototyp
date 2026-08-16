@@ -14,7 +14,7 @@ void main() {
   test('loadPendingSyncChanges groups all pending entries by EVNr', () async {
     const key1 = 'obj_E903_Testweg_1_DIV';
     const key2 = 'obj_E903_Testweg_2_ES';
-    const key3 = 'obj_E904_Otherway_1_VS';
+    const key3 = 'obj_E904_Otherway_1_VG';
 
     await SpeicherService.upsertEntry(key1, {
       'typ': 'DIV',
@@ -31,7 +31,7 @@ void main() {
     });
 
     await SpeicherService.upsertEntry(key3, {
-      'typ': 'VS',
+      'typ': 'VG',
       'evnr': 'E904',
       'strasse': 'Otherway',
       'posNr': '1',

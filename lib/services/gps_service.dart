@@ -5,6 +5,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class GpsService {
+  static const double targetAccuracyMeters = 5;
+  static const Duration _initialFixTimeout = Duration(seconds: 15);
+  static const Duration _refineTimeout = Duration(seconds: 30);
+
   static Future<Map<String, dynamic>?> getCurrentLocation() async {
     try {
       final enabled = await Geolocator.isLocationServiceEnabled();
@@ -14,38 +18,41 @@ class GpsService {
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
       }
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
         return null;
       }
 
       var best = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
+          accuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: _initialFixTimeout,
         ),
       );
 
-      if (best.accuracy <= 25) {
+      if (_isTargetAccuracy(best)) {
         return _toGpsMap(best);
       }
 
       final collected = <Position>[best];
       StreamSubscription<Position>? sub;
+      final targetReached = Completer<void>();
       try {
-        sub = Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.best,
-            distanceFilter: 0,
-          ),
-        ).listen((pos) {
-          collected.add(pos);
-          best = _bestPosition(collected);
-        });
+        sub =
+            Geolocator.getPositionStream(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.bestForNavigation,
+                distanceFilter: 0,
+              ),
+            ).listen((pos) {
+              collected.add(pos);
+              best = _bestPosition(collected);
+              if (_isTargetAccuracy(best) && !targetReached.isCompleted) {
+                targetReached.complete();
+              }
+            });
 
-        await Future.any([
-          Future.delayed(const Duration(seconds: 12)),
-          sub.asFuture<void>(),
-        ]);
+        await targetReached.future.timeout(_refineTimeout, onTimeout: () {});
       } finally {
         await sub?.cancel();
       }
@@ -56,10 +63,15 @@ class GpsService {
     }
   }
 
+  static bool _isTargetAccuracy(Position pos) {
+    return pos.accuracy <= targetAccuracyMeters;
+  }
+
   static Position _bestPosition(List<Position> positions) {
     return positions.reduce((currentBest, candidate) {
       if (candidate.accuracy < currentBest.accuracy) return candidate;
-      if (candidate.accuracy == currentBest.accuracy && candidate.timestamp.isAfter(currentBest.timestamp)) {
+      if (candidate.accuracy == currentBest.accuracy &&
+          candidate.timestamp.isAfter(currentBest.timestamp)) {
         return candidate;
       }
       return currentBest;
@@ -71,6 +83,8 @@ class GpsService {
       'lat': pos.latitude,
       'lon': pos.longitude,
       'accuracy_m': pos.accuracy.round(),
+      'target_accuracy_m': targetAccuracyMeters.round(),
+      'target_reached': _isTargetAccuracy(pos),
       'ts': DateTime.now().toIso8601String(),
     };
   }

@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/session_store.dart';
 
 import 'nis_plan_viewer_mobile.dart'
-  if (dart.library.html) 'nis_plan_viewer_web.dart';
+    if (dart.library.html) 'nis_plan_viewer_web.dart';
 
 class NisPlanViewerDialog extends StatefulWidget {
   final String pdfBase64;
@@ -101,11 +101,13 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
       if (x is! num || y is! num) continue;
       final type = _parseStampType(typeStr);
       if (type == null) continue;
-      result.add(_NisStamp(
-        type: type,
-        pos: Offset(x.toDouble(), y.toDouble()),
-        text: item['text']?.toString(),
-      ));
+      result.add(
+        _NisStamp(
+          type: type,
+          pos: Offset(x.toDouble(), y.toDouble()),
+          text: item['text']?.toString(),
+        ),
+      );
     }
     return result;
   }
@@ -118,28 +120,33 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
 
   List<Map<String, dynamic>> _encodeRoutes() {
     return _routes
-        .map((r) => {
-              'color': r.color.name,
-              'points': r.points.map((p) => [p.dx, p.dy]).toList(),
-            })
+        .map(
+          (r) => {
+            'color': r.color.name,
+            'points': r.points.map((p) => [p.dx, p.dy]).toList(),
+          },
+        )
         .toList();
   }
 
   List<Map<String, dynamic>> _encodeStamps() {
     return _stamps
-        .map((s) => {
-              'type': s.type.name,
-              'x': s.pos.dx,
-              'y': s.pos.dy,
-              if (s.text != null && s.text!.isNotEmpty) 'text': s.text,
-            })
+        .map(
+          (s) => {
+            'type': s.type.name,
+            'x': s.pos.dx,
+            'y': s.pos.dy,
+            if (s.text != null && s.text!.isNotEmpty) 'text': s.text,
+          },
+        )
         .toList();
   }
 
   bool get _canSave => (widget.evnr ?? '').trim().isNotEmpty;
 
   Offset _normalize(Offset p) {
-    if (_canvasSize.width <= 0 || _canvasSize.height <= 0) return const Offset(0, 0);
+    if (_canvasSize.width <= 0 || _canvasSize.height <= 0)
+      return const Offset(0, 0);
     return Offset(
       (p.dx / _canvasSize.width).clamp(0.0, 1.0),
       (p.dy / _canvasSize.height).clamp(0.0, 1.0),
@@ -151,7 +158,8 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
     setState(() {
       if (_tool == _NisTool.pen) {
         _currentStroke = <Offset>[n];
-        _strokesNorm = List<List<Offset>>.from(_strokesNorm)..add(_currentStroke!);
+        _strokesNorm = List<List<Offset>>.from(_strokesNorm)
+          ..add(_currentStroke!);
       } else if (_tool == _NisTool.route) {
         _currentRoute = _RouteLine(color: _routeColor, points: <Offset>[n]);
         _routes = List<_RouteLine>.from(_routes)..add(_currentRoute!);
@@ -181,8 +189,14 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
     final n = _normalize(localPosition);
     final type = _tool.toStampType;
     if (type == null) return;
-    final text = type == _NisStampType.posNumber ? _posTextCtrl.text.trim() : null;
-    setState(() => _stamps = List<_NisStamp>.from(_stamps)..add(_NisStamp(type: type, pos: n, text: text)));
+    final text = type == _NisStampType.posNumber
+        ? _posTextCtrl.text.trim()
+        : null;
+    setState(
+      () =>
+          _stamps = List<_NisStamp>.from(_stamps)
+            ..add(_NisStamp(type: type, pos: n, text: text)),
+    );
   }
 
   Future<void> _saveDrawings() async {
@@ -196,9 +210,9 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
       stamps: _encodeStamps(),
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('NIS-Zeichnung gespeichert.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('NIS-Zeichnung gespeichert.')));
   }
 
   Future<void> _openNisInNewTab() async {
@@ -212,7 +226,11 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('NIS-PDF ist ungültig und konnte nicht geöffnet werden.')),
+        const SnackBar(
+          content: Text(
+            'NIS-PDF ist ungültig und konnte nicht geöffnet werden.',
+          ),
+        ),
       );
       return;
     }
@@ -230,9 +248,18 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
 
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('NIS-PDF konnte nicht im Browser geöffnet werden.')),
+        const SnackBar(
+          content: Text('NIS-PDF konnte nicht im Browser geöffnet werden.'),
+        ),
       );
     }
+  }
+
+  Widget _buildPdfForCurrentTool() {
+    return buildNisPdfViewer(
+      widget.pdfBase64,
+      allowInteraction: _tool == _NisTool.none,
+    );
   }
 
   @override
@@ -279,7 +306,8 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
                   tooltip: 'ES (Kreis mit X)',
                   icon: Icons.do_not_disturb_on,
                   selected: _tool == _NisTool.stampCircleX,
-                  onPressed: () => setState(() => _tool = _NisTool.stampCircleX),
+                  onPressed: () =>
+                      setState(() => _tool = _NisTool.stampCircleX),
                 ),
                 _ToolButton(
                   tooltip: 'Lueftung (X mit Pfeil)',
@@ -303,13 +331,15 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
                   tooltip: 'Leitungsverlauf unbekannt (3 Striche)',
                   icon: Icons.more_horiz,
                   selected: _tool == _NisTool.stampUnknownLine,
-                  onPressed: () => setState(() => _tool = _NisTool.stampUnknownLine),
+                  onPressed: () =>
+                      setState(() => _tool = _NisTool.stampUnknownLine),
                 ),
                 _ToolButton(
                   tooltip: 'Positionsnummer (rot)',
                   icon: Icons.pin,
                   selected: _tool == _NisTool.stampPosNumber,
-                  onPressed: () => setState(() => _tool = _NisTool.stampPosNumber),
+                  onPressed: () =>
+                      setState(() => _tool = _NisTool.stampPosNumber),
                 ),
                 SizedBox(
                   width: 70,
@@ -324,31 +354,43 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
                 IconButton(
                   tooltip: 'Letzte Linie löschen',
                   icon: const Icon(Icons.undo),
-                  onPressed: (_strokesNorm.isEmpty && _routes.isEmpty && _stamps.isEmpty)
+                  onPressed:
+                      (_strokesNorm.isEmpty &&
+                          _routes.isEmpty &&
+                          _stamps.isEmpty)
                       ? null
                       : () => setState(() {
-                            if (_tool == _NisTool.route && _routes.isNotEmpty) {
-                              _routes = List<_RouteLine>.from(_routes)..removeLast();
-                            } else if (_tool == _NisTool.pen && _strokesNorm.isNotEmpty) {
-                              _strokesNorm = List<List<Offset>>.from(_strokesNorm)..removeLast();
-                            } else if (_stamps.isNotEmpty) {
-                              _stamps = List<_NisStamp>.from(_stamps)..removeLast();
-                            }
-                          }),
+                          if (_tool == _NisTool.route && _routes.isNotEmpty) {
+                            _routes = List<_RouteLine>.from(_routes)
+                              ..removeLast();
+                          } else if (_tool == _NisTool.pen &&
+                              _strokesNorm.isNotEmpty) {
+                            _strokesNorm = List<List<Offset>>.from(_strokesNorm)
+                              ..removeLast();
+                          } else if (_stamps.isNotEmpty) {
+                            _stamps = List<_NisStamp>.from(_stamps)
+                              ..removeLast();
+                          }
+                        }),
                 ),
                 IconButton(
                   tooltip: 'Alle Zeichnungen löschen',
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: (_strokesNorm.isEmpty && _routes.isEmpty && _stamps.isEmpty)
+                  onPressed:
+                      (_strokesNorm.isEmpty &&
+                          _routes.isEmpty &&
+                          _stamps.isEmpty)
                       ? null
                       : () => setState(() {
-                            _strokesNorm = <List<Offset>>[];
-                            _routes = <_RouteLine>[];
-                            _stamps = <_NisStamp>[];
-                          }),
+                          _strokesNorm = <List<Offset>>[];
+                          _routes = <_RouteLine>[];
+                          _stamps = <_NisStamp>[];
+                        }),
                 ),
                 IconButton(
-                  tooltip: _canSave ? 'Zeichnung speichern' : 'Speichern nur mit EVNr möglich',
+                  tooltip: _canSave
+                      ? 'Zeichnung speichern'
+                      : 'Speichern nur mit EVNr möglich',
                   icon: const Icon(Icons.save_outlined),
                   onPressed: _canSave ? _saveDrawings : null,
                 ),
@@ -366,16 +408,12 @@ class _NisPlanViewerDialogState extends State<NisPlanViewerDialog> {
                 _canvasSize = constraints.biggest;
                 return Stack(
                   children: [
-                    Positioned.fill(
-                      child: buildNisPdfViewer(
-                        widget.pdfBase64,
-                        allowInteraction: _tool == _NisTool.none,
-                      ),
-                    ),
+                    Positioned.fill(child: _buildPdfForCurrentTool()),
                     Positioned.fill(
                       child: IgnorePointer(
                         ignoring: _tool == _NisTool.none,
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTapDown: (d) => _placeStamp(d.localPosition),
                           onPanStart: (d) => _startStroke(d.localPosition),
                           onPanUpdate: (d) => _extendStroke(d.localPosition),
@@ -471,7 +509,10 @@ class _NisDrawingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     for (final stamp in stamps) {
-      final center = Offset(stamp.pos.dx * size.width, stamp.pos.dy * size.height);
+      final center = Offset(
+        stamp.pos.dx * size.width,
+        stamp.pos.dy * size.height,
+      );
       final s = (size.shortestSide * 0.03).clamp(12.0, 22.0);
       _drawStamp(canvas, stamp, center, s, stampPaint, redPaint);
     }
@@ -487,7 +528,17 @@ class _NisDrawingPainter extends CustomPainter {
   }
 }
 
-enum _NisTool { none, pen, route, stampCircleX, stampArrow, stampBowtie, stampBox, stampUnknownLine, stampPosNumber }
+enum _NisTool {
+  none,
+  pen,
+  route,
+  stampCircleX,
+  stampArrow,
+  stampBowtie,
+  stampBox,
+  stampUnknownLine,
+  stampPosNumber,
+}
 
 extension on _NisTool {
   _NisStampType? get toStampType {
@@ -514,7 +565,6 @@ enum _RouteColor { green, red, blue }
 
 extension on _RouteColor {
   String get name => toString().split('.').last;
-
 }
 
 enum _NisStampType { circleX, arrow, bowtie, box, unknownLine, posNumber }
@@ -566,18 +616,41 @@ class _NisStamp {
   _NisStamp({required this.type, required this.pos, this.text});
 }
 
-void _drawStamp(Canvas canvas, _NisStamp stamp, Offset c, double s, Paint paint, Paint redPaint) {
+void _drawStamp(
+  Canvas canvas,
+  _NisStamp stamp,
+  Offset c,
+  double s,
+  Paint paint,
+  Paint redPaint,
+) {
   switch (stamp.type) {
     case _NisStampType.circleX:
       canvas.drawCircle(c, s, paint);
-      canvas.drawLine(c + Offset(-s * 0.6, -s * 0.6), c + Offset(s * 0.6, s * 0.6), paint);
-      canvas.drawLine(c + Offset(-s * 0.6, s * 0.6), c + Offset(s * 0.6, -s * 0.6), paint);
+      canvas.drawLine(
+        c + Offset(-s * 0.6, -s * 0.6),
+        c + Offset(s * 0.6, s * 0.6),
+        paint,
+      );
+      canvas.drawLine(
+        c + Offset(-s * 0.6, s * 0.6),
+        c + Offset(s * 0.6, -s * 0.6),
+        paint,
+      );
       canvas.drawCircle(c, s * 1.25, redPaint);
       break;
     case _NisStampType.arrow:
       // X in the center
-      canvas.drawLine(c + Offset(-s * 0.35, -s * 0.35), c + Offset(s * 0.35, s * 0.35), paint);
-      canvas.drawLine(c + Offset(-s * 0.35, s * 0.35), c + Offset(s * 0.35, -s * 0.35), paint);
+      canvas.drawLine(
+        c + Offset(-s * 0.35, -s * 0.35),
+        c + Offset(s * 0.35, s * 0.35),
+        paint,
+      );
+      canvas.drawLine(
+        c + Offset(-s * 0.35, s * 0.35),
+        c + Offset(s * 0.35, -s * 0.35),
+        paint,
+      );
       // Up arrow above the X
       final shaftTop = c.dy - s * 0.95;
       final shaftBottom = c.dy - s * 0.2;
@@ -587,7 +660,9 @@ void _drawStamp(Canvas canvas, _NisStamp stamp, Offset c, double s, Paint paint,
         ..lineTo(c.dx - s * 0.35, shaftTop + s * 0.35)
         ..lineTo(c.dx + s * 0.35, shaftTop + s * 0.35)
         ..close();
-      final headPaint = Paint()..color = paint.color..style = PaintingStyle.fill;
+      final headPaint = Paint()
+        ..color = paint.color
+        ..style = PaintingStyle.fill;
       canvas.drawPath(head, headPaint);
       canvas.drawCircle(c, s * 1.25, redPaint);
       break;
@@ -602,7 +677,9 @@ void _drawStamp(Canvas canvas, _NisStamp stamp, Offset c, double s, Paint paint,
         ..lineTo(c.dx + s * 0.1, c.dy - s * 0.7)
         ..lineTo(c.dx + s * 0.1, c.dy + s * 0.7)
         ..close();
-      final fill = Paint()..color = paint.color..style = PaintingStyle.fill;
+      final fill = Paint()
+        ..color = paint.color
+        ..style = PaintingStyle.fill;
       canvas.drawPath(left, fill);
       canvas.drawPath(right, fill);
       canvas.drawCircle(c, s * 1.25, redPaint);
@@ -610,21 +687,43 @@ void _drawStamp(Canvas canvas, _NisStamp stamp, Offset c, double s, Paint paint,
     case _NisStampType.box:
       final rect = Rect.fromCenter(center: c, width: s * 2.2, height: s * 1.2);
       canvas.drawRect(rect, paint);
-      canvas.drawLine(Offset(rect.left + rect.width / 3, rect.top), Offset(rect.left + rect.width / 3, rect.bottom), paint);
-      canvas.drawLine(Offset(rect.left + rect.width * 2 / 3, rect.top), Offset(rect.left + rect.width * 2 / 3, rect.bottom), paint);
+      canvas.drawLine(
+        Offset(rect.left + rect.width / 3, rect.top),
+        Offset(rect.left + rect.width / 3, rect.bottom),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(rect.left + rect.width * 2 / 3, rect.top),
+        Offset(rect.left + rect.width * 2 / 3, rect.bottom),
+        paint,
+      );
       canvas.drawCircle(c, s * 1.25, redPaint);
       break;
     case _NisStampType.unknownLine:
       final y = c.dy;
       final dash = s * 0.35;
       final gap = s * 0.25;
-      canvas.drawLine(Offset(c.dx - dash - gap * 1.5, y), Offset(c.dx - gap * 1.5, y), paint);
-      canvas.drawLine(Offset(c.dx - dash / 2, y), Offset(c.dx + dash / 2, y), paint);
-      canvas.drawLine(Offset(c.dx + gap * 1.5, y), Offset(c.dx + dash + gap * 1.5, y), paint);
+      canvas.drawLine(
+        Offset(c.dx - dash - gap * 1.5, y),
+        Offset(c.dx - gap * 1.5, y),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(c.dx - dash / 2, y),
+        Offset(c.dx + dash / 2, y),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(c.dx + gap * 1.5, y),
+        Offset(c.dx + dash + gap * 1.5, y),
+        paint,
+      );
       canvas.drawCircle(c, s * 1.25, redPaint);
       break;
     case _NisStampType.posNumber:
-      final label = (stamp.text == null || stamp.text!.isEmpty) ? '?' : stamp.text!;
+      final label = (stamp.text == null || stamp.text!.isEmpty)
+          ? '?'
+          : stamp.text!;
       final textStyle = TextStyle(
         color: const Color(0xFFC62828),
         fontSize: s * 1.2,
@@ -640,12 +739,21 @@ void _drawStamp(Canvas canvas, _NisStamp stamp, Offset c, double s, Paint paint,
   }
 }
 
-void _drawDashedPath(Canvas canvas, Path path, Paint paint, {required double dashLength, required double gapLength}) {
+void _drawDashedPath(
+  Canvas canvas,
+  Path path,
+  Paint paint, {
+  required double dashLength,
+  required double gapLength,
+}) {
   for (final metric in path.computeMetrics()) {
     double distance = 0;
     while (distance < metric.length) {
       final next = distance + dashLength;
-      final extract = metric.extractPath(distance, next.clamp(0, metric.length));
+      final extract = metric.extractPath(
+        distance,
+        next.clamp(0, metric.length),
+      );
       canvas.drawPath(extract, paint);
       distance = next + gapLength;
     }
@@ -669,12 +777,11 @@ class _ToolButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: tooltip,
-      icon: Icon(icon, color: selected ? Theme.of(context).colorScheme.primary : null),
+      icon: Icon(
+        icon,
+        color: selected ? Theme.of(context).colorScheme.primary : null,
+      ),
       onPressed: onPressed,
     );
   }
 }
-
-
-
-

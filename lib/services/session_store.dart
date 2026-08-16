@@ -21,30 +21,31 @@ class SessionData {
   });
 
   Map<String, dynamic> toJson() => {
-        'evnr': evnr,
-        'strasse': strasse,
-        'erfasser': erfasser,
-        'wetter': wetter,
-        'zeitIso': zeitIso,
-        'temperatur': temperatur,
-        'nisPlanPdf': nisPlanPdf,
-      };
+    'evnr': evnr,
+    'strasse': strasse,
+    'erfasser': erfasser,
+    'wetter': wetter,
+    'zeitIso': zeitIso,
+    'temperatur': temperatur,
+    'nisPlanPdf': nisPlanPdf,
+  };
 
   static SessionData fromJson(Map<String, dynamic> m) => SessionData(
-        evnr: (m['evnr'] ?? '').toString(),
-        strasse: (m['strasse'] ?? '').toString(),
-        erfasser: (m['erfasser'] ?? '').toString(),
-        wetter: (m['wetter'] ?? 'klar').toString(),
-        zeitIso: (m['zeitIso'] ?? DateTime.now().toIso8601String()).toString(),
-        nisPlanPdf: m['nisPlanPdf'] as String?,
-        temperatur: (m['temperatur'] ?? '').toString(),
-      );
+    evnr: (m['evnr'] ?? '').toString(),
+    strasse: (m['strasse'] ?? '').toString(),
+    erfasser: (m['erfasser'] ?? '').toString(),
+    wetter: (m['wetter'] ?? 'klar').toString(),
+    zeitIso: (m['zeitIso'] ?? DateTime.now().toIso8601String()).toString(),
+    nisPlanPdf: m['nisPlanPdf'] as String?,
+    temperatur: (m['temperatur'] ?? '').toString(),
+  );
 }
 
 class NisPlanData {
   final String pdfBase64;
   final String? fileName;
-  final List<List<List<double>>>? drawings; // normalisierte Freihand-Zeichnungen
+  final List<List<List<double>>>?
+  drawings; // normalisierte Freihand-Zeichnungen
   final List<Map<String, dynamic>>? routes; // Leitungsverläufe (Farbe + Punkte)
   final List<Map<String, dynamic>>? stamps; // Stempel (Typ + Position)
 
@@ -57,20 +58,20 @@ class NisPlanData {
   });
 
   Map<String, dynamic> toJson() => {
-        'pdfBase64': pdfBase64,
-        'fileName': fileName,
-        'drawings': drawings,
-      'routes': routes,
-      'stamps': stamps,
-      };
+    'pdfBase64': pdfBase64,
+    'fileName': fileName,
+    'drawings': drawings,
+    'routes': routes,
+    'stamps': stamps,
+  };
 
   static NisPlanData fromJson(Map<String, dynamic> m) => NisPlanData(
-        pdfBase64: (m['pdfBase64'] ?? '').toString(),
-        fileName: m['fileName']?.toString(),
-        drawings: _parseDrawings(m['drawings']),
-      routes: _parseRoutes(m['routes']),
-      stamps: _parseStamps(m['stamps']),
-      );
+    pdfBase64: (m['pdfBase64'] ?? '').toString(),
+    fileName: m['fileName']?.toString(),
+    drawings: _parseDrawings(m['drawings']),
+    routes: _parseRoutes(m['routes']),
+    stamps: _parseStamps(m['stamps']),
+  );
 
   static List<List<List<double>>>? _parseDrawings(dynamic raw) {
     if (raw is! List) return null;
@@ -112,7 +113,9 @@ class NisPlanData {
     for (final item in raw) {
       if (item is Map) {
         final map = item.cast<String, dynamic>();
-        if (map.containsKey('type') && map.containsKey('x') && map.containsKey('y')) {
+        if (map.containsKey('type') &&
+            map.containsKey('x') &&
+            map.containsKey('y')) {
           result.add(map);
         }
       }
@@ -134,7 +137,26 @@ extension SessionDataExt on SessionData {
 
 class SessionStore {
   static const _key = 'start_session_v1';
-  static const _nisKey = 'nis_plan_by_evnr_v1';
+  static const _nisLegacyKey = 'nis_plan_by_evnr_v1';
+  static const _nisIndexKey = 'nis_plan_evnr_index_v2';
+  static const _nisItemPrefix = 'nis_plan_item_v2_';
+
+  static String _nisItemKey(String evnr) {
+    return '$_nisItemPrefix${Uri.encodeComponent(evnr)}';
+  }
+
+  static List<String> _cleanIndex(List<String> values) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final value in values) {
+      final clean = value.trim();
+      if (clean.isEmpty || seen.contains(clean)) continue;
+      seen.add(clean);
+      result.add(clean);
+    }
+    result.sort();
+    return result;
+  }
 
   static Future<void> save(SessionData s) async {
     final prefs = await SharedPreferences.getInstance();
@@ -162,24 +184,19 @@ class SessionStore {
 
   static Future<List<String>> loadNisPlanEvnrs() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_nisKey);
-    if (raw == null || raw.isEmpty) return <String>[];
-    try {
-      final map = jsonDecode(raw) as Map<String, dynamic>;
-      final result = <String>[];
-      for (final entry in map.entries) {
-        final value = entry.value;
-        if (value is Map) {
-          final pdf = value['pdfBase64'];
-          if (pdf is String && pdf.trim().isNotEmpty) {
-            result.add(entry.key);
-          }
-        }
-      }
-      return result;
-    } catch (_) {
-      return <String>[];
+    final indexed = prefs.getStringList(_nisIndexKey);
+    if (indexed != null) return _cleanIndex(indexed);
+
+    final fromPerEvnrKeys = prefs
+        .getKeys()
+        .where((key) => key.startsWith(_nisItemPrefix))
+        .map((key) => Uri.decodeComponent(key.substring(_nisItemPrefix.length)))
+        .toList();
+    final clean = _cleanIndex(fromPerEvnrKeys);
+    if (clean.isNotEmpty) {
+      await prefs.setStringList(_nisIndexKey, clean);
     }
+    return clean;
   }
 
   static Future<void> clear() async {
@@ -198,34 +215,90 @@ class SessionStore {
     final e = evnr.trim();
     if (e.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_nisKey);
-    Map<String, dynamic> map = {};
-    if (raw != null && raw.isNotEmpty) {
-      try {
-        map = jsonDecode(raw) as Map<String, dynamic>;
-      } catch (_) {
-        map = {};
-      }
-    }
-    map[e] = {
-      'pdfBase64': pdfBase64,
-      'fileName': fileName,
-      'drawings': drawings,
-      'routes': routes,
-      'stamps': stamps,
-    };
-    await prefs.setString(_nisKey, jsonEncode(map));
+    final data = NisPlanData(
+      pdfBase64: pdfBase64,
+      fileName: fileName,
+      drawings: drawings,
+      routes: routes,
+      stamps: stamps,
+    );
+
+    await prefs.setString(_nisItemKey(e), jsonEncode(data.toJson()));
+    await _addNisIndex(prefs, e);
   }
 
   static Future<NisPlanData?> loadNisPlanForEvnr(String evnr) async {
     final e = evnr.trim();
     if (e.isEmpty) return null;
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_nisKey);
+
+    final raw = prefs.getString(_nisItemKey(e));
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final data = NisPlanData.fromJson(
+          jsonDecode(raw) as Map<String, dynamic>,
+        );
+        return data.pdfBase64.trim().isEmpty ? null : data;
+      } catch (_) {
+        await prefs.remove(_nisItemKey(e));
+      }
+    }
+
+    final legacy = await _loadLegacyNisPlanForEvnr(prefs, e);
+    if (legacy == null) return null;
+
+    await prefs.setString(_nisItemKey(e), jsonEncode(legacy.toJson()));
+    await _addNisIndex(prefs, e);
+    return legacy;
+  }
+
+  static Future<void> clearNisPlanForEvnr(String evnr) async {
+    final e = evnr.trim();
+    if (e.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_nisItemKey(e));
+    await _removeNisIndex(prefs, e);
+
+    final raw = prefs.getString(_nisLegacyKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      map.remove(e);
+      if (map.isEmpty) {
+        await prefs.remove(_nisLegacyKey);
+      } else {
+        await prefs.setString(_nisLegacyKey, jsonEncode(map));
+      }
+    } catch (_) {
+      return;
+    }
+  }
+
+  static Future<void> _addNisIndex(SharedPreferences prefs, String evnr) async {
+    final current = prefs.getStringList(_nisIndexKey) ?? <String>[];
+    await prefs.setStringList(_nisIndexKey, _cleanIndex([...current, evnr]));
+  }
+
+  static Future<void> _removeNisIndex(
+    SharedPreferences prefs,
+    String evnr,
+  ) async {
+    final current = prefs.getStringList(_nisIndexKey) ?? <String>[];
+    await prefs.setStringList(
+      _nisIndexKey,
+      _cleanIndex(current.where((value) => value.trim() != evnr).toList()),
+    );
+  }
+
+  static Future<NisPlanData?> _loadLegacyNisPlanForEvnr(
+    SharedPreferences prefs,
+    String evnr,
+  ) async {
+    final raw = prefs.getString(_nisLegacyKey);
     if (raw == null || raw.isEmpty) return null;
     try {
       final map = jsonDecode(raw) as Map<String, dynamic>;
-      final item = map[e];
+      final item = map[evnr];
       if (item is Map<String, dynamic>) {
         final data = NisPlanData.fromJson(item);
         return data.pdfBase64.trim().isEmpty ? null : data;
@@ -238,20 +311,5 @@ class SessionStore {
       return null;
     }
     return null;
-  }
-
-  static Future<void> clearNisPlanForEvnr(String evnr) async {
-    final e = evnr.trim();
-    if (e.isEmpty) return;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_nisKey);
-    if (raw == null || raw.isEmpty) return;
-    try {
-      final map = jsonDecode(raw) as Map<String, dynamic>;
-      map.remove(e);
-      await prefs.setString(_nisKey, jsonEncode(map));
-    } catch (_) {
-      return;
-    }
   }
 }

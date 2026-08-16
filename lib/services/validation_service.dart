@@ -14,6 +14,7 @@ class ValidationResult {
 class ValidationService {
   static final RegExp _positionPattern = RegExp(r'^[0-9]+[a-zA-Z]?$');
   static final RegExp _digitsOnlyPattern = RegExp(r'^\d+$');
+  static const Set<int> _standardSchachtdurchmesserCm = {100, 120};
 
   static const Map<String, int> _idLengthByType = {
     'ES': 8,
@@ -32,6 +33,30 @@ class ValidationService {
     final trimmed = (value ?? '').trim();
     if (trimmed.isEmpty) return requiredMessage;
     if (!_positionPattern.hasMatch(trimmed)) return formatMessage;
+    return null;
+  }
+
+  static String? validateSchachtdurchmesserCm(String? value) {
+    final trimmed = (value ?? '').trim();
+    if (trimmed.isEmpty) {
+      return 'Bitte Schachtdurchmesser eintragen.';
+    }
+
+    final normalized = trimmed.replaceAll(',', '.');
+    final parsed = num.tryParse(normalized);
+    if (parsed == null) {
+      return 'Schachtdurchmesser bitte als Zahl in cm eintragen.';
+    }
+
+    if (parsed % 1 != 0) {
+      return 'Schachtdurchmesser bitte ohne Nachkommastellen eintragen.';
+    }
+
+    final diameter = parsed.toInt();
+    if (!_standardSchachtdurchmesserCm.contains(diameter)) {
+      return 'Schachtdurchmesser muss 100 oder 120 cm sein.';
+    }
+
     return null;
   }
 
@@ -68,25 +93,50 @@ class ValidationService {
     );
 
     final normalizedExcludeKey = (excludeStorageKey ?? '').trim();
-    final hasDuplicate = entries.any((entry) {
-      final existingPos = (entry['posNr'] ?? '').toString().trim();
-      if (existingPos != pos) return false;
+    final requestedPositions = _splitPositions(pos);
+    final conflictingPositions = <String>{};
 
+    for (final entry in entries) {
+      final existingPos = (entry['posNr'] ?? '').toString().trim();
       final entryKey = (entry['storageKey'] ?? '').toString().trim();
       if (normalizedExcludeKey.isNotEmpty && entryKey == normalizedExcludeKey) {
-        return false;
+        continue;
       }
 
-      return true;
-    });
+      final overlap = requestedPositions.intersection(
+        _splitPositions(existingPos),
+      );
+      conflictingPositions.addAll(overlap);
+    }
 
-    if (hasDuplicate) {
+    if (conflictingPositions.isNotEmpty) {
+      final conflicts = conflictingPositions.toList()..sort(_comparePositions);
       return ValidationResult.fail(
-        'Positionsnummer $pos existiert bereits in dieser EVNr/Straße.',
+        conflicts.length == 1
+            ? 'Position ${conflicts.first} ist in dieser EVNr/Straße bereits belegt.'
+            : 'Die Positionen ${conflicts.join(", ")} sind in dieser EVNr/Straße bereits belegt.',
       );
     }
 
     return const ValidationResult.ok();
+  }
+
+  static Set<String> _splitPositions(String value) => value
+      .split('/')
+      .map((part) => part.trim().toLowerCase())
+      .where((part) => part.isNotEmpty)
+      .toSet();
+
+  static int _comparePositions(String a, String b) {
+    final aMatch = RegExp(r'^(\d+)([a-z]?)$').firstMatch(a);
+    final bMatch = RegExp(r'^(\d+)([a-z]?)$').firstMatch(b);
+    if (aMatch == null || bMatch == null) return a.compareTo(b);
+
+    final numberComparison = int.parse(
+      aMatch.group(1)!,
+    ).compareTo(int.parse(bMatch.group(1)!));
+    if (numberComparison != 0) return numberComparison;
+    return aMatch.group(2)!.compareTo(bMatch.group(2)!);
   }
 
   /// Validiert die ID-Nummer typabhaengig (nur Ziffern, feste Laenge).

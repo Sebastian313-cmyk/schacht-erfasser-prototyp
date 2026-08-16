@@ -33,7 +33,7 @@ Map<String, dynamic> buildCurrentEsMeta({
 
 Map<String, dynamic> buildCurrentVsMeta() {
   return {
-    'typ': 'VS',
+    'typ': 'VG',
     'evnr': 'E90002',
     'posNr': '2a',
     'idNr': '123456',

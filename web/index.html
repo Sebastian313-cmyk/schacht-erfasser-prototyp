@@ -29,41 +29,30 @@
 
   <title>Erfasser App</title>
   <link rel="manifest" href="manifest.json">
-  
-  <!-- Service Worker für Auto-Updates -->
+  <!-- Lokale Arbeitsversion: alte Service Worker und App-Caches entfernen. -->
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('✅ Service Worker registriert:', registration.scope);
-            
-            // Auf Updates prüfen
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              console.log('🔄 Neue Version gefunden, wird installiert...');
-              
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // Neue Version verfügbar - Seite neu laden
-                  console.log('✨ Neue Version bereit!');
-                  if (confirm('Neue Version verfügbar! Jetzt aktualisieren?')) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                  }
-                }
-              });
-            });
-          })
-          .catch((error) => {
-            console.error('❌ Service Worker Registrierung fehlgeschlagen:', error);
-          });
-      });
-    }
+    window.erfasserClearOldWebCaches = async function () {
+      const tasks = [];
+      if ('serviceWorker' in navigator) {
+        tasks.push(
+          navigator.serviceWorker
+            .getRegistrations()
+            .then((registrations) =>
+              Promise.all(registrations.map((registration) => registration.unregister()))
+            )
+        );
+      }
+      if ('caches' in window) {
+        tasks.push(
+          caches
+            .keys()
+            .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+        );
+      }
+      await Promise.all(tasks).catch(() => {});
+    };
   </script>
-  
-  
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
   
   
   
@@ -155,7 +144,17 @@
   
   
   
-  <script src="flutter_bootstrap.js" async=""></script>
+  <script>
+    (async function () {
+      if (window.erfasserClearOldWebCaches) {
+        await window.erfasserClearOldWebCaches();
+      }
+      const script = document.createElement('script');
+      script.src = 'flutter_bootstrap.js?v=20260720-modules';
+      script.async = true;
+      document.body.appendChild(script);
+    })();
+  </script>
 
 
 </body></html>

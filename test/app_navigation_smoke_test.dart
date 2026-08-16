@@ -11,16 +11,20 @@ void main() {
     expect(find.text('Erfasserdaten'), findsOneWidget);
   });
 
-  testWidgets('Named route navigation reaches Gruben and ES screens', (tester) async {
+  testWidgets('Named route navigation reaches Gruben and ES screens', (
+    tester,
+  ) async {
     await tester.pumpWidget(const ErfasserApp(disableUpdateChecker: true));
     await tester.pump(const Duration(seconds: 1));
 
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
 
     navigator.pushNamed(Routes.g);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.text('Grube (VS)'), findsOneWidget);
+    expect(find.text('Grube (VG)'), findsOneWidget);
 
     navigator.pushNamed(Routes.es);
     await tester.pump();

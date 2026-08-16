@@ -6,7 +6,6 @@ import '../services/session_store.dart';
 import '../services/repository.dart';
 import '../services/speicher_service.dart';
 import '../services/validation_service.dart';
-import '../services/gps_service.dart';
 // entfernt: ungenutzter ExportService-Import
 import '../models/base_entry.dart';
 import '../models/enums.dart';
@@ -26,46 +25,48 @@ class SonstigesScreen extends StatefulWidget {
 }
 
 class _SonstigesScreenState extends State<SonstigesScreen> {
-    // State für 312/313 Buttons
-    bool _show312 = false;
-    bool _show313 = false;
+  // State für 312/313 Buttons
+  bool _show312 = false;
+  bool _show313 = false;
 
-    void _toggle312() {
-      setState(() {
-        _show312 = !_show312;
-        if (_show312) {
-          _show313 = false;
-          _abteilungen.removeWhere((e) => e.startsWith('313'));
-        }
-      });
-    }
-
-    void _toggle313() {
-      setState(() {
-        _show313 = !_show313;
-        if (_show313) {
-          _show312 = false;
-          _abteilungen.removeWhere((e) => e.startsWith('312'));
-        }
-      });
-    }
-
-    void _syncAbteilungsToggles() {
-      final has312 = _abteilungen.any((e) => e.startsWith('312'));
-      final has313 = _abteilungen.any((e) => e.startsWith('313'));
-      if (has312 && !has313) {
-        _show312 = true;
+  void _toggle312() {
+    setState(() {
+      _show312 = !_show312;
+      if (_show312) {
         _show313 = false;
-      } else if (has313 && !has312) {
-        _show313 = true;
-        _show312 = false;
+        _abteilungen.removeWhere((e) => e.startsWith('313'));
       }
+    });
+  }
+
+  void _toggle313() {
+    setState(() {
+      _show313 = !_show313;
+      if (_show313) {
+        _show312 = false;
+        _abteilungen.removeWhere((e) => e.startsWith('312'));
+      }
+    });
+  }
+
+  void _syncAbteilungsToggles() {
+    final has312 = _abteilungen.any((e) => e.startsWith('312'));
+    final has313 = _abteilungen.any((e) => e.startsWith('313'));
+    if (has312 && !has313) {
+      _show312 = true;
+      _show313 = false;
+    } else if (has313 && !has312) {
+      _show313 = true;
+      _show312 = false;
     }
+  }
+
   SessionData? _session;
   final _formKey = GlobalKey<FormState>();
 
   bool get _isEdit {
-    final key = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final key =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     return widget.existingMeta != null && (key ?? '').isNotEmpty;
   }
 
@@ -124,12 +125,21 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
 
     _fotos
       ..clear()
-      ..addAll(((m['mediaFotos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaFotos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _videos
       ..clear()
-      ..addAll(((m['mediaVideos'] as List<dynamic>?) ?? const []).map((e) => e.toString()));
+      ..addAll(
+        ((m['mediaVideos'] as List<dynamic>?) ?? const []).map(
+          (e) => e.toString(),
+        ),
+      );
     _audios.clear();
-    final audios = (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final audios =
+        (m['mediaAudios'] as List<dynamic>?)?.cast<String>() ?? <String>[];
     _audios.addAll(audios);
     final pdf = m['mediaPdfs'];
     if (pdf is List) _pdfs.addAll(pdf.cast<String>());
@@ -198,9 +208,9 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
         _audios.add(audioData);
         setState(() {});
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Audio hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Audio hinzugefügt')));
         }
       }
     }
@@ -246,10 +256,14 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: Text(
-                      recognizedText.isEmpty ? 'Erkannter Text wird hier angezeigt' : recognizedText,
+                      recognizedText.isEmpty
+                          ? 'Erkannter Text wird hier angezeigt'
+                          : recognizedText,
                       style: TextStyle(
                         fontSize: 14,
-                        color: recognizedText.isEmpty ? Colors.grey : Colors.black,
+                        color: recognizedText.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
                       ),
                     ),
                   ),
@@ -305,9 +319,9 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
           }
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Diktat hinzugefügt')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Diktat hinzugefügt')));
         }
       }
     });
@@ -325,13 +339,20 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
   // ----------------------------- Save -----------------------------
   Future<void> _onSave() async {
     if (_session == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+          ),
+        ),
+      );
       return;
     }
     if (!_formKey.currentState!.validate()) return;
 
     final pos = _posCtrl.text.trim();
-    final existingKey = widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
+    final existingKey =
+        widget.storageKey ?? widget.existingMeta?['storageKey'] as String?;
     final uniqueCheck = await ValidationService.validateUniquePosition(
       evnr: _session!.evnr,
       strasse: _session!.strasse,
@@ -340,21 +361,22 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
     );
     if (!uniqueCheck.isValid) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(uniqueCheck.message!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(uniqueCheck.message!)));
       return;
     }
 
     // Bemerkung/Medien
     var bemerkung = _bemCtrl.text.trim();
     if (_fotos.isNotEmpty || _videos.isNotEmpty) {
-      final mv = '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
+      final mv =
+          '📷 ${_fotos.length}${_videos.isNotEmpty ? ' / 🎥 ${_videos.length}' : ''}';
       bemerkung = bemerkung.isEmpty ? mv : '$bemerkung | $mv';
     }
 
     // GPS erfassen (einmalig beim Speichern)
-    final gps = await GpsService.getCurrentLocation();
+    final gps = null;
 
     // Persistenz
     final meta = {
@@ -364,6 +386,7 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
       'erfasser': _session!.erfasser,
       'zeitIso': _session!.zeitIso,
       'wetter': _session!.wetter,
+      'temperatur': _session!.temperatur,
       'posNr': pos,
       'keinBefund': _keinBefund,
       'schaeden': _schaeden.toList(),
@@ -382,7 +405,8 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
         ? existingKey!
         : 'obj_${_session!.evnr}_${_session!.strasse}_${pos}_DIV';
     if (_isEdit) {
-      meta['createdAt'] = widget.existingMeta?['createdAt'] ?? meta['createdAt'];
+      meta['createdAt'] =
+          widget.existingMeta?['createdAt'] ?? meta['createdAt'];
     }
     meta['storageKey'] = metaKey;
     await SpeicherService.upsertEntry(metaKey, meta);
@@ -416,15 +440,20 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
     // downloadBytesWeb(pdf, 'ErfasserApp_EVNr-$safeEv-$safePos-DIV_Steckbrief.pdf');
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Sonstiges gespeichert (im Gesamt-Export enthalten).')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sonstiges gespeichert (im Gesamt-Export enthalten).'),
+      ),
+    );
     Navigator.pop(context);
   }
 
   // ----------------------------- UI -----------------------------
   Future<void> _openNisPlan() async {
     final evnr = _session?.evnr ?? '';
-    final nis = evnr.trim().isNotEmpty ? await SessionStore.loadNisPlanForEvnr(evnr) : null;
+    final nis = evnr.trim().isNotEmpty
+        ? await SessionStore.loadNisPlanForEvnr(evnr)
+        : null;
     if (!mounted) return;
     final base64 = nis?.pdfBase64 ?? _session?.nisPlanPdf;
     if (base64 == null || base64.isEmpty) {
@@ -460,7 +489,7 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
             '- Objektbezeichnung, Zustand und freie Bemerkungen dokumentieren.\n'
             '- Medien können optional angehängt werden.\n\n'
             'Hinweis:\n'
-            'Gespeichert wird im Modul, exportiert zentral über den Bericht.'
+            'Gespeichert wird im Modul, exportiert zentral über den Bericht.',
           ),
         ),
         actions: [
@@ -481,6 +510,7 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sonstiges (DIV)'),
+        centerTitle: true,
         actions: [
           TextButton.icon(
             onPressed: _openNisPlan,
@@ -497,219 +527,263 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
         ],
       ),
       body: s == null
-          ? const Center(child: Text('Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.'))
+          ? const Center(
+              child: Text(
+                'Bitte zuerst auf der Startseite EVNr/Straße/Erfasser setzen.',
+              ),
+            )
           : Form(
               key: _formKey,
-              child: ListView(padding: const EdgeInsets.all(16), children: [
-                // Kopf
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('DIV – Kopf', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 6),
-                      _kv('EVNr', s.evnr),
-                      _kv('Straße', s.strasse),
-                      _kv('Erfasser:in', s.erfasser),
-                      _kv('Datum/Zeit', df.format(DateTime.tryParse(s.zeitIso) ?? DateTime.now())),
-                      _kv('Wetter', _wIcon(s.wetter)),
-                    ]),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ObjectGpsPanel(initialMeta: widget.existingMeta),
-                const SizedBox(height: 12),
-
-                // Pflichtfelder
-                _label('Positionsnummer *'),
-                TextFormField(
-                  controller: _posCtrl,
-                  decoration: const InputDecoration(hintText: 'z. B. 1, 1a, 2'),
-                  validator: ValidationService.validatePositionField,
-                ),
-                // Kategorie, Titel, Kein Befund entfallen
-
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _bemCtrl,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Bemerkung (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-                _sectionLabel('Schäden'),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => setState(() {
-                          _keinBefund = false;
-                          _schadenActive = true;
-                        }),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _schadenActive ? Colors.red : null,
-                        ),
-                        icon: const Icon(Icons.warning_outlined),
-                        label: const Text('Schäden'),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Kopf
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Erfasser Daten',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 6),
+                          _kv('EVNr', s.evnr),
+                          _kv('Straße', s.strasse),
+                          _kv('Erfasser:in', s.erfasser),
+                          _kv(
+                            'Datum/Zeit',
+                            df.format(
+                              DateTime.tryParse(s.zeitIso) ?? DateTime.now(),
+                            ),
+                          ),
+                          _kv('Wetter', _wIcon(s.wetter)),
+                          _kv(
+                            'Temperatur',
+                            formatTemperatureValue(s.temperatur),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => setState(() {
-                          _keinBefund = true;
-                          _schadenActive = false;
-                          _schadensdetailsCtrl.clear();
-                        }),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _keinBefund ? Colors.green : null,
-                        ),
-                        icon: const Icon(Icons.check_circle_outline),
-                        label: const Text('Kein Befund'),
-                      ),
+                  ),
+                  const SizedBox(height: 12),
+                  ObjectGpsPanel(initialMeta: widget.existingMeta),
+                  const SizedBox(height: 12),
+
+                  // Pflichtfelder
+                  _label('Positionsnummer *'),
+                  TextFormField(
+                    controller: _posCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'z. B. 1, 1a, 2',
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (_schadenActive)
+                    validator: ValidationService.validatePositionField,
+                  ),
+
+                  // Kategorie, Titel, Kein Befund entfallen
+                  const SizedBox(height: 12),
                   TextField(
-                    controller: _schadensdetailsCtrl,
+                    controller: _bemCtrl,
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      labelText: 'Schadensdetails',
-                      hintText: 'Beschreiben Sie die Schäden',
+                      labelText: 'Bemerkung (optional)',
                       border: OutlineInputBorder(),
                     ),
                   ),
 
-                const SizedBox(height: 16),
-                _sectionLabel('Abteilungen'),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    ElevatedButton(
-                      onPressed: _toggle312,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _show312 ? Colors.blue : null,
+                  const SizedBox(height: 16),
+                  _sectionLabel('Schäden'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => setState(() {
+                            _keinBefund = false;
+                            _schadenActive = true;
+                          }),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _schadenActive ? Colors.red : null,
+                          ),
+                          icon: const Icon(Icons.warning_outlined),
+                          label: const Text('Schäden'),
+                        ),
                       ),
-                      child: const Text('312'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _toggle313,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _show313 ? Colors.blue : null,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => setState(() {
+                            _keinBefund = true;
+                            _schadenActive = false;
+                            _schadensdetailsCtrl.clear();
+                          }),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _keinBefund ? Colors.green : null,
+                          ),
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: const Text('Kein Befund'),
+                        ),
                       ),
-                      child: const Text('313'),
-                    ),
-                  ],
-                ),
-                if (_show312)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        FilterChip(
-                          label: const Text('312 IZ AR'),
-                          selected: _abteilungen.contains('312 IZ AR'),
-                          onSelected: (v) => setState(() {
-                            v ? _abteilungen.add('312 IZ AR') : _abteilungen.remove('312 IZ AR');
-                          }),
-                        ),
-                        FilterChip(
-                          label: const Text('312 Ost'),
-                          selected: _abteilungen.contains('312 Ost'),
-                          onSelected: (v) => setState(() {
-                            v ? _abteilungen.add('312 Ost') : _abteilungen.remove('312 Ost');
-                          }),
-                        ),
-                        FilterChip(
-                          label: const Text('312 Service'),
-                          selected: _abteilungen.contains('312 Service'),
-                          onSelected: (v) => setState(() {
-                            v ? _abteilungen.add('312 Service') : _abteilungen.remove('312 Service');
-                          }),
-                        ),
-                        FilterChip(
-                          label: const Text('312 West'),
-                          selected: _abteilungen.contains('312 West'),
-                          onSelected: (v) => setState(() {
-                            v ? _abteilungen.add('312 West') : _abteilungen.remove('312 West');
-                          }),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                if (_show313)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        FilterChip(
-                          label: const Text('313 TU'),
-                          selected: _abteilungen.contains('313 TU'),
-                          onSelected: (v) => setState(() {
-                            v ? _abteilungen.add('313 TU') : _abteilungen.remove('313 TU');
-                          }),
-                        ),
-                        FilterChip(
-                          label: const Text('313 BU'),
-                          selected: _abteilungen.contains('313 BU'),
-                          onSelected: (v) => setState(() {
-                            v ? _abteilungen.add('313 BU') : _abteilungen.remove('313 BU');
-                          }),
-                        ),
-                        FilterChip(
-                          label: const Text('313 BauKo'),
-                          selected: _abteilungen.contains('313 BauKo'),
-                          onSelected: (v) => setState(() {
-                            v ? _abteilungen.add('313 BauKo') : _abteilungen.remove('313 BauKo');
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-                // ...entfernt: doppelte Abteilungs-Buttons...
-
-                const SizedBox(height: 16),
-                _sectionLabel('Medien'),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _pickMedia,
-                      icon: const Icon(Icons.image),
-                      label: const Text('Medien'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _pickAudio,
-                      icon: const Icon(Icons.mic),
-                      label: const Text('Audio'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _pickFolder,
-                      icon: const Icon(Icons.folder_open),
-                      label: const Text('PDF'),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                  const SizedBox(height: 12),
+                  if (_schadenActive)
+                    TextField(
+                      controller: _schadensdetailsCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Schadensdetails',
+                        hintText: 'Beschreiben Sie die Schäden',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text('📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}'),
 
-                const SizedBox(height: 20),
-                FilledButton.icon(onPressed: _onSave, icon: const Icon(Icons.save), label: const Text('PDF speichern')),
-              ]),
+                  const SizedBox(height: 16),
+                  _sectionLabel('Abteilungen'),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _toggle312,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _show312 ? Colors.blue : null,
+                        ),
+                        child: const Text('312'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _toggle313,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _show313 ? Colors.blue : null,
+                        ),
+                        child: const Text('313'),
+                      ),
+                    ],
+                  ),
+                  if (_show312)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('312 IZ AR'),
+                            selected: _abteilungen.contains('312 IZ AR'),
+                            onSelected: (v) => setState(() {
+                              v
+                                  ? _abteilungen.add('312 IZ AR')
+                                  : _abteilungen.remove('312 IZ AR');
+                            }),
+                          ),
+                          FilterChip(
+                            label: const Text('312 Ost'),
+                            selected: _abteilungen.contains('312 Ost'),
+                            onSelected: (v) => setState(() {
+                              v
+                                  ? _abteilungen.add('312 Ost')
+                                  : _abteilungen.remove('312 Ost');
+                            }),
+                          ),
+                          FilterChip(
+                            label: const Text('312 Service'),
+                            selected: _abteilungen.contains('312 Service'),
+                            onSelected: (v) => setState(() {
+                              v
+                                  ? _abteilungen.add('312 Service')
+                                  : _abteilungen.remove('312 Service');
+                            }),
+                          ),
+                          FilterChip(
+                            label: const Text('312 West'),
+                            selected: _abteilungen.contains('312 West'),
+                            onSelected: (v) => setState(() {
+                              v
+                                  ? _abteilungen.add('312 West')
+                                  : _abteilungen.remove('312 West');
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_show313)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('313 TU'),
+                            selected: _abteilungen.contains('313 TU'),
+                            onSelected: (v) => setState(() {
+                              v
+                                  ? _abteilungen.add('313 TU')
+                                  : _abteilungen.remove('313 TU');
+                            }),
+                          ),
+                          FilterChip(
+                            label: const Text('313 BU'),
+                            selected: _abteilungen.contains('313 BU'),
+                            onSelected: (v) => setState(() {
+                              v
+                                  ? _abteilungen.add('313 BU')
+                                  : _abteilungen.remove('313 BU');
+                            }),
+                          ),
+                          FilterChip(
+                            label: const Text('313 BauKo'),
+                            selected: _abteilungen.contains('313 BauKo'),
+                            onSelected: (v) => setState(() {
+                              v
+                                  ? _abteilungen.add('313 BauKo')
+                                  : _abteilungen.remove('313 BauKo');
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // ...entfernt: doppelte Abteilungs-Buttons...
+                  const SizedBox(height: 16),
+                  _sectionLabel('Medien'),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _pickMedia,
+                        icon: const Icon(Icons.image),
+                        label: const Text('Medien'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _pickAudio,
+                        icon: const Icon(Icons.mic),
+                        label: const Text('Audio'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _pickFolder,
+                        icon: const Icon(Icons.folder_open),
+                        label: const Text('PDF'),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '📷 ${_fotos.length}   🎥 ${_videos.length}   🎤 ${_audios.length}   📄 ${_pdfs.length}',
+                  ),
+
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: _onSave,
+                    icon: const Icon(Icons.save),
+                    label: const Text('PDF speichern'),
+                  ),
+                ],
+              ),
             ),
     );
   }
