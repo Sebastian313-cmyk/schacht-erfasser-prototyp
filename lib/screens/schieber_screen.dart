@@ -572,7 +572,7 @@ class _SchieberScreenState extends State<SchieberScreen> {
         title: const Text('Beschreibung - Schieberkappen (SK)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Dieses Modul erfasst Schieberkappen (SK).\n\n'
+            'Hier werden Schieberkappen (SK) erfasst.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Bauart, Zustand und ergänzende Angaben erfassen.\n'

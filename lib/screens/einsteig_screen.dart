@@ -838,13 +838,13 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
         title: const Text('Beschreibung - Einsteigschacht (ES)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Dieses Modul erfasst Einsteigschächte.\n\n'
+            'Hier werden Einsteigschächte erfasst.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Danach schrittweise Eingangsart, Deckel, Schäden, Details und Maße erfassen.\n'
             '- Medien (Foto/Video/Audio/PDF) können im letzten Schritt ergänzt werden.\n\n'
             'Hinweis:\n'
-            'Die Daten werden im Modul gespeichert. Dateien werden erst im Bericht beim Export erzeugt.',
+            'Die Daten werden in der App gespeichert. Dateien werden erst im Bericht beim Export erzeugt.',
           ),
         ),
         actions: [

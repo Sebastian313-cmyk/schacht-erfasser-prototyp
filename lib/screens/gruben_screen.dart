@@ -612,7 +612,7 @@ class _GrubenScreenState extends State<GrubenScreen> {
         title: const Text('Beschreibung - Grube (VG)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Dieses Modul erfasst Grubenanlagen (VG).\n\n'
+            'Hier werden Grubenanlagen (VG) erfasst.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Zustands- und Ausstattungsmerkmale der Grube erfassen.\n'

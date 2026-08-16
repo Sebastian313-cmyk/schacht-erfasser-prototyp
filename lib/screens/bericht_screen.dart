@@ -674,7 +674,7 @@ class _BerichtScreenState extends State<BerichtScreen> {
     return showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Modul zum Bearbeiten auswählen'),
+        title: const Text('Objektart zum Bearbeiten auswählen'),
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(

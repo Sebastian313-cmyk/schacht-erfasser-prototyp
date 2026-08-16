@@ -61,7 +61,7 @@ void main() {
     expect(find.byTooltip('Bearbeiten'), findsOneWidget);
     await tester.tap(find.byTooltip('Bearbeiten'));
     await tester.pump();
-    expect(find.text('Modul zum Bearbeiten auswählen'), findsOneWidget);
+    expect(find.text('Objektart zum Bearbeiten auswählen'), findsOneWidget);
     expect(find.text('Einstiegschacht'), findsOneWidget);
     expect(find.text('Sickergrube / Versitzgrube'), findsOneWidget);
     expect(find.text('Straßensinkkasten'), findsOneWidget);

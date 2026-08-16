@@ -321,10 +321,10 @@ class _StartBildschirmState extends State<StartBildschirm>
             'von Kanal-, Schacht- und Nebenbauwerken in einer durchgängigen Oberfläche.\n\n'
             'Ablauf der App\n'
             '1. Startbildschirm: EVNr, Straße, Erfasser:in, Datum/Zeit, Wetter und optional Temperatur setzen.\n'
-            '2. NIS: NIS-Plan als PDF hochladen, über NIS direkt anzeigen und in den Modulen zur Orientierung nutzen.\n'
-            '3. Module: Passendes Fachmodul auswählen und objektspezifische Daten erfassen.\n'
+            '2. NIS: NIS-Plan als PDF hochladen, über NIS direkt anzeigen und bei der Objekterfassung zur Orientierung nutzen.\n'
+            '3. Objekte: Passende Objektart auswählen und objektspezifische Daten erfassen.\n'
             '4. Bericht: Alle erfassten Daten prüfen und erst beim Export die Ausgabedateien erzeugen.\n\n'
-            'Verfügbare Module\n'
+            'Verfügbare Objekte\n'
             '- ES: Einsteigschächte\n'
             '- VG: Gruben\n'
             '- SSK: Straßensinkkasten\n'
@@ -333,13 +333,13 @@ class _StartBildschirmState extends State<StartBildschirm>
             '- KANAL: Kanal\n'
             '- DIV: Sonstiges\n\n'
             'Wichtige Regeln\n'
-            '- Pflichtfeld in den Modulen ist die Positionsnummer.\n'
-            '- Speichern im Modul sichert die Daten in der App.\n'
+            '- Pflichtfeld bei allen Objekten ist die Positionsnummer.\n'
+            '- Speichern in der jeweiligen Objektmaske sichert die Daten in der App.\n'
             '- Dateien werden gesammelt und erst im Bericht beim Export erstellt.\n\n'
             'Legende\n'
             'Über Legende können Symbolik und Begriffe für die Erfassung eingesehen werden.\n\n'
             'Hinweis\n'
-            'Für saubere Ergebnisse zuerst Erfasserdaten setzen, danach Module bearbeiten '
+            'Für saubere Ergebnisse zuerst Erfasserdaten setzen, danach Objekte erfassen '
             'und zum Abschluss über den Bericht exportieren.',
           ),
         ),
@@ -378,7 +378,7 @@ class _StartBildschirmState extends State<StartBildschirm>
             'NIS\n'
             '- Über NIS wird der hinterlegte Plan direkt in der App geöffnet.\n\n'
             'Export\n'
-            '- Module speichern Erfassungsdaten sofort.\n'
+            '- Beim Speichern eines Objekts werden die Erfassungsdaten sofort gesichert.\n'
             '- Ausgabedateien (z. B. PDFs) werden gesammelt erst im Bericht beim Export erstellt.',
           ),
         ),
@@ -799,14 +799,14 @@ class _StartBildschirmState extends State<StartBildschirm>
           ),
           // ============ SCHRITT 1: MODULE ============
           Step(
-            title: const Text('Module'),
+            title: const Text('Objekte'),
             isActive: _currentStep >= 1,
             state: _currentStep > 1 ? StepState.complete : StepState.indexed,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Modul auswählen',
+                  'Objekt auswählen',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 12),

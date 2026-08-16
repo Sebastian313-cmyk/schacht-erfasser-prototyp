@@ -483,13 +483,13 @@ class _SonstigesScreenState extends State<SonstigesScreen> {
         title: const Text('Beschreibung - Sonstiges (DIV)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Dieses Modul erfasst sonstige Bauwerke und Sonderfälle (DIV).\n\n'
+            'Hier werden sonstige Bauwerke und Sonderfälle (DIV) erfasst.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Objektbezeichnung, Zustand und freie Bemerkungen dokumentieren.\n'
             '- Medien können optional angehängt werden.\n\n'
             'Hinweis:\n'
-            'Gespeichert wird im Modul, exportiert zentral über den Bericht.',
+            'Gespeichert wird in der App, exportiert zentral über den Bericht.',
           ),
         ),
         actions: [

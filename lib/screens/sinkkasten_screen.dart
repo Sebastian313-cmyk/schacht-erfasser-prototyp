@@ -741,13 +741,13 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
         title: const Text('Beschreibung - Straßensinkkasten (SSK)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Dieses Modul erfasst Straßensinkkästen (SSK).\n\n'
+            'Hier werden Straßensinkkästen (SSK) erfasst.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Ablaufart, Zustand und weitere SSK-Merkmale eintragen.\n'
             '- Zugeordnete Positionen können optional ergänzt werden.\n\n'
             'Hinweis:\n'
-            'Die Erfassung wird im Modul gespeichert, Exportdateien entstehen erst im Bericht.',
+            'Die Erfassung wird in der App gespeichert, Exportdateien entstehen erst im Bericht.',
           ),
         ),
         actions: [

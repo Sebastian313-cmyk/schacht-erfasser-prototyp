@@ -455,7 +455,7 @@ class _LueftungScreenState extends State<LueftungScreen> {
         title: const Text('Beschreibung - Lüftung (L)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Dieses Modul erfasst Lüftungsbauwerke.\n\n'
+            'Hier werden Lüftungsbauwerke erfasst.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Bauwerksdaten, Zustand und besondere Merkmale dokumentieren.\n'
