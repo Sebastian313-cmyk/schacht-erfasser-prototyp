@@ -321,25 +321,25 @@ class _StartBildschirmState extends State<StartBildschirm>
             'von Kanal-, Schacht- und Nebenbauwerken in einer durchgängigen Oberfläche.\n\n'
             'Ablauf der App\n'
             '1. Startbildschirm: EVNr, Straße, Erfasser:in, Datum/Zeit, Wetter und optional Temperatur setzen.\n'
-            '2. NIS: NIS-Plan als PDF hochladen, über NIS direkt anzeigen und bei der Objekterfassung zur Orientierung nutzen.\n'
-            '3. Objekte: Passende Objektart auswählen und objektspezifische Daten erfassen.\n'
+            '2. NIS: NIS-Plan als PDF hochladen, über NIS direkt anzeigen und in den Objekten zur Orientierung nutzen.\n'
+            '3. Objekte: Passendes Objekt auswählen und objektspezifische Daten erfassen.\n'
             '4. Bericht: Alle erfassten Daten prüfen und erst beim Export die Ausgabedateien erzeugen.\n\n'
             'Verfügbare Objekte\n'
             '- ES: Einsteigschächte\n'
             '- VG: Gruben\n'
             '- SSK: Straßensinkkasten\n'
             '- L: Lüftung\n'
-            '- SK: Schieber\n'
+            '- SK: Schieberkappen\n'
             '- KANAL: Kanal\n'
             '- DIV: Sonstiges\n\n'
             'Wichtige Regeln\n'
-            '- Pflichtfeld bei allen Objekten ist die Positionsnummer.\n'
-            '- Speichern in der jeweiligen Objektmaske sichert die Daten in der App.\n'
+            '- Pflichtfeld in den Objekten ist die Positionsnummer.\n'
+            '- Speichern im Objekt sichert die Daten in der App.\n'
             '- Dateien werden gesammelt und erst im Bericht beim Export erstellt.\n\n'
             'Legende\n'
             'Über Legende können Symbolik und Begriffe für die Erfassung eingesehen werden.\n\n'
             'Hinweis\n'
-            'Für saubere Ergebnisse zuerst Erfasserdaten setzen, danach Objekte erfassen '
+            'Für saubere Ergebnisse zuerst Erfasserdaten setzen, danach Objekte bearbeiten '
             'und zum Abschluss über den Bericht exportieren.',
           ),
         ),
@@ -378,7 +378,7 @@ class _StartBildschirmState extends State<StartBildschirm>
             'NIS\n'
             '- Über NIS wird der hinterlegte Plan direkt in der App geöffnet.\n\n'
             'Export\n'
-            '- Beim Speichern eines Objekts werden die Erfassungsdaten sofort gesichert.\n'
+            '- Objekte speichern Erfassungsdaten sofort.\n'
             '- Ausgabedateien (z. B. PDFs) werden gesammelt erst im Bericht beim Export erstellt.',
           ),
         ),
@@ -797,7 +797,7 @@ class _StartBildschirmState extends State<StartBildschirm>
               ],
             ),
           ),
-          // ============ SCHRITT 1: MODULE ============
+          // ============ SCHRITT 1: OBJEKTE ============
           Step(
             title: const Text('Objekte'),
             isActive: _currentStep >= 1,
@@ -818,35 +818,50 @@ class _StartBildschirmState extends State<StartBildschirm>
                   crossAxisSpacing: 14,
                   childAspectRatio: isSmallScreen ? 0.92 : 0.98,
                   children: [
-                    moduleTile('ES', 'Einsteig', route: Routes.es),
+                    moduleTile(
+                      'ES',
+                      'Einsteig',
+                      assetPath: 'assets/App/Symbole/ES_Einsteigschacht.png',
+                      route: Routes.es,
+                    ),
                     moduleTile(
                       'VG',
                       'Gruben',
+                      assetPath: 'assets/App/Symbole/VG_Versickergrube.png',
                       icon: Icons.construction,
                       route: Routes.g,
                     ),
-                    moduleTile('SSK', 'Straßensinkkasten', route: Routes.ssk),
+                    moduleTile(
+                      'SSK',
+                      'Straßensinkkasten',
+                      assetPath: 'assets/App/Symbole/SSK_Strassensinkkasten.png',
+                      route: Routes.ssk,
+                    ),
                     moduleTile(
                       'L',
                       'Lüftung',
+                      assetPath: 'assets/App/Symbole/L_Lueftung.png',
                       icon: Icons.wind_power,
                       route: Routes.l,
                     ),
                     moduleTile(
                       'SK',
-                      'Schieber',
+                      'Schieberkappen',
+                      assetPath: 'assets/App/Symbole/SK_Schieberkappe.png',
                       icon: Icons.settings,
                       route: Routes.sk,
                     ),
                     moduleTile(
                       'KANAL',
                       'Kanal',
+                      assetPath: 'assets/App/Symbole/Kanal.png',
                       icon: Icons.water,
                       route: Routes.kanal,
                     ),
                     moduleTile(
                       'DIV',
                       'Sonstiges',
+                      assetPath: 'assets/App/Symbole/DIV_Sonstiges.png',
                       icon: Icons.extension,
                       route: Routes.div,
                     ),
@@ -1030,47 +1045,81 @@ class _StartBildschirmState extends State<StartBildschirm>
     String abbr,
     String name, {
     IconData? icon,
-    String? svgAsset,
+    String? assetPath,
     String? route,
   }) {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final double iconSize = isMobile ? 28 : 34;
     return Material(
-      color: Colors.blueGrey[50],
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.white,
+      elevation: 1,
+      shadowColor: Colors.blueGrey.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: route != null
             ? () => _navigateAndRefresh(route)
             : () => ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Stub: "$name" – wird später ergänzt.')),
               ),
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 14 : 18),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.blueGrey.shade200, width: 1),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              // Logo entfernt
-              if (icon != null) ...[
-                Icon(icon, size: iconSize, color: Colors.blueGrey[700]),
-              ],
-              const SizedBox(height: 6),
-              Text(
-                abbr,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: isMobile ? 18 : 22,
+              if (assetPath != null)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Opacity(
+                      opacity: 0.08,
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 10,
+                          top: 8,
+                          right: 6,
+                          bottom: 6,
+                        ),
+                        child: Image.asset(
+                          assetPath,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                name,
-                style: TextStyle(
-                  fontSize: isMobile ? 13 : 15,
-                  color: Colors.grey[700],
+              Padding(
+                padding: EdgeInsets.all(isMobile ? 14 : 18),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: iconSize, color: Colors.blueGrey[700]),
+                    ],
+                    const SizedBox(height: 6),
+                    Text(
+                      abbr,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: isMobile ? 18 : 22,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: isMobile ? 13 : 15,
+                        color: Colors.grey[700],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),

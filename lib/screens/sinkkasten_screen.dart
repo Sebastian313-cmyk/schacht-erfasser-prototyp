@@ -76,6 +76,7 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
   final Set<String> _verfuegbarkeit = <String>{};
   final Set<String> _statusVorOrt = <String>{};
   final _verfuegbarkeitErgaenzenCtrl = TextEditingController();
+  final _ueberbautTextCtrl = TextEditingController();
 
   // Abteilungen (Marker)
   // Nur für 312/313-Logik: aktuelle Abteilungs-Auswahl
@@ -154,7 +155,8 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       ..addAll(_splitSet(m['verfuegbarkeit']));
     _statusVorOrt
       ..clear()
-      ..addAll(_splitSet(m['statusVorOrt']));
+      ..addAll(parseStatusVorOrtSelection(m['statusVorOrt']));
+    _ueberbautTextCtrl.text = extractUeberbautText(m['statusVorOrt']) ?? '';
 
     _abteilungen
       ..clear()
@@ -281,6 +283,8 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
     _abdeckungBemCtrl.dispose();
     _ablaufrinneVerbindungCtrl.dispose();
     _bemCtrl.dispose();
+    _verfuegbarkeitErgaenzenCtrl.dispose();
+    _ueberbautTextCtrl.dispose();
     super.dispose();
   }
 
@@ -593,7 +597,10 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
 
         statusVorOrtLabel: _statusVorOrt.isEmpty
             ? null
-            : _statusVorOrt.join(', '),
+            : buildStatusVorOrtLabel(
+                _statusVorOrt,
+                ueberbautText: _ueberbautTextCtrl.text,
+              ),
 
         // Typ/Ausprägung geht in "spezial"
         notizen: null,
@@ -644,6 +651,11 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
       ).showSnackBar(SnackBar(content: Text(idValidation)));
       return;
     }
+    final statusVorOrtItems = buildStatusVorOrtItems(
+      _statusVorOrt,
+      ueberbautText: _ueberbautTextCtrl.text,
+    );
+
     final meta = {
       'typ': 'SSK',
       'evnr': _session!.evnr,
@@ -665,7 +677,7 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
           ? _ablaufrinneVerbindungCtrl.text.trim()
           : '',
       'verfuegbarkeit': _verfuegbarkeit.toList(),
-      'statusVorOrt': _statusVorOrt.toList(),
+      'statusVorOrt': statusVorOrtItems,
       'abteilungen': _abteilungen.toList(),
       'schaeden': _schaeden.toList(),
       'keinBefund': _keinBefund,
@@ -741,13 +753,13 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
         title: const Text('Beschreibung - Straßensinkkasten (SSK)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Hier werden Straßensinkkästen (SSK) erfasst.\n\n'
+            'Dieses Objekt erfasst Straßensinkkästen (SSK).\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Ablaufart, Zustand und weitere SSK-Merkmale eintragen.\n'
             '- Zugeordnete Positionen können optional ergänzt werden.\n\n'
             'Hinweis:\n'
-            'Die Erfassung wird in der App gespeichert, Exportdateien entstehen erst im Bericht.',
+            'Die Erfassung wird im Objekt gespeichert, Exportdateien entstehen erst im Bericht.',
           ),
         ),
         actions: [
@@ -969,12 +981,26 @@ class _SinkkastenScreenState extends State<SinkkastenScreen> {
                                               _statusVorOrt.add(opt);
                                             } else {
                                               _statusVorOrt.remove(opt);
+                                              if (opt == 'überbaut') {
+                                                _ueberbautTextCtrl.clear();
+                                              }
                                             }
                                           });
                                         },
                                       );
                                     }).toList(),
                               ),
+                              if (_statusVorOrt.contains('überbaut')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _ueberbautTextCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Überbaut: Womit ist es überbaut?',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
                             ],
                           ),
                         ),

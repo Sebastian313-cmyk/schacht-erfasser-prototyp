@@ -88,6 +88,13 @@ flutter:
     - assets/fonts/NotoSans-Regular.ttf
     - assets/fonts/NotoSans-Bold.ttf
     - assets/App/Formulare/
+    - assets/App/Symbole/ES_Einsteigschacht.png
+    - assets/App/Symbole/VG_Versickergrube.png
+    - assets/App/Symbole/SSK_Strassensinkkasten.png
+    - assets/App/Symbole/L_Lueftung.png
+    - assets/App/Symbole/SK_Schieberkappe.png
+    - assets/App/Symbole/Kanal.png
+    - assets/App/Symbole/DIV_Sonstiges.png
     # Medien-Assets für Fotos, Videos, Audios (alle Unterordner)
     - assets/App/ES/
     - assets/App/SSK/

@@ -52,6 +52,7 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
   final Set<String> _verfuegbarkeit = <String>{};
   final Set<String> _statusVorOrt = <String>{};
   final _verfuegbarkeitErgaenzenCtrl = TextEditingController();
+  final _ueberbautTextCtrl = TextEditingController();
 
   String _eingang = 'Seiteneinstieg';
   String _einsteigart = 'Leiter';
@@ -150,7 +151,8 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     _verfuegbarkeit.clear();
     _verfuegbarkeit.addAll(toSet(meta['verfuegbarkeit']));
     _statusVorOrt.clear();
-    _statusVorOrt.addAll(toSet(meta['statusVorOrt']));
+    _statusVorOrt.addAll(parseStatusVorOrtSelection(meta['statusVorOrt']));
+    _ueberbautTextCtrl.text = extractUeberbautText(meta['statusVorOrt']) ?? '';
     _eingang = (meta['eingang'] as String?) ?? _eingang;
     _einsteigart = (meta['einsteigart'] as String?) ?? _einsteigart;
     _steigeisenStand = (meta['steigeisenStand'] as String?) ?? 'Alt';
@@ -233,6 +235,8 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     _massBermeCtrl.dispose();
     _massSolltiefeCtrl.dispose();
     _bemCtrl.dispose();
+    _verfuegbarkeitErgaenzenCtrl.dispose();
+    _ueberbautTextCtrl.dispose();
     super.dispose();
   }
 
@@ -568,6 +572,11 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
       return;
     }
 
+    final statusVorOrtText = buildStatusVorOrtLabel(
+      _statusVorOrt,
+      ueberbautText: _ueberbautTextCtrl.text,
+    );
+
     final meta = {
       'typ': 'ES',
       'evnr': _session!.evnr,
@@ -579,7 +588,7 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
       'posNr': pos,
       'idNr': _idNrCtrl.text.trim(),
       'verfuegbarkeit': _verfuegbarkeit.join(', '),
-      'statusVorOrt': _statusVorOrt.join(', '),
+      'statusVorOrt': statusVorOrtText,
       'eingang': _eingang,
       'einsteigart': _einsteigart,
       'steigeisenStand': _einsteigart == 'Steigeisen' ? _steigeisenStand : '',
@@ -669,7 +678,10 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
           : _verfuegbarkeit.join(', '),
       statusVorOrtLabel: _statusVorOrt.isEmpty
           ? null
-          : _statusVorOrt.join(', '),
+          : buildStatusVorOrtLabel(
+              _statusVorOrt,
+              ueberbautText: _ueberbautTextCtrl.text,
+            ),
       notizen: mediaNote,
       spezial: spezialParts.isEmpty ? null : spezialParts.join(' • '),
       deckelart: deckelLabel,
@@ -700,7 +712,10 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
     if (_verfuegbarkeit.isNotEmpty)
       fields['Verfügbarkeit'] = _verfuegbarkeit.join(', ');
     if (_statusVorOrt.isNotEmpty)
-      fields['Status vor Ort'] = _statusVorOrt.join(', ');
+      fields['Status vor Ort'] = buildStatusVorOrtLabel(
+        _statusVorOrt,
+        ueberbautText: _ueberbautTextCtrl.text,
+      );
 
     // Standard-Felder
     fields['Eingang'] = _eingang;
@@ -838,13 +853,13 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
         title: const Text('Beschreibung - Einsteigschacht (ES)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Hier werden Einsteigschächte erfasst.\n\n'
+            'Dieses Objekt erfasst Einsteigschächte.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Danach schrittweise Eingangsart, Deckel, Schäden, Details und Maße erfassen.\n'
             '- Medien (Foto/Video/Audio/PDF) können im letzten Schritt ergänzt werden.\n\n'
             'Hinweis:\n'
-            'Die Daten werden in der App gespeichert. Dateien werden erst im Bericht beim Export erzeugt.',
+            'Die Daten werden im Objekt gespeichert. Dateien werden erst im Bericht beim Export erzeugt.',
           ),
         ),
         actions: [
@@ -1069,6 +1084,9 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
                                               _statusVorOrt.add(opt);
                                             } else {
                                               _statusVorOrt.remove(opt);
+                                              if (opt == 'überbaut') {
+                                                _ueberbautTextCtrl.clear();
+                                              }
                                             }
                                           });
                                         },
@@ -1076,6 +1094,17 @@ class _EinsteigScreenState extends State<EinsteigScreen> {
                                     )
                                     .toList(),
                               ),
+                              if (_statusVorOrt.contains('überbaut')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _ueberbautTextCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Überbaut: Womit ist es überbaut?',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
                             ],
                           ),
                         ),

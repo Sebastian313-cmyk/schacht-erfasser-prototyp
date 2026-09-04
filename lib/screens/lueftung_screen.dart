@@ -94,6 +94,7 @@ class _LueftungScreenState extends State<LueftungScreen> {
   final Set<String> _verfuegbarkeit = <String>{}; // Mehrfachauswahl
   final Set<String> _statusVorOrt = <String>{}; // Mehrfachauswahl
   final _verfuegbarkeitErgaenzenCtrl = TextEditingController();
+  final _ueberbautTextCtrl = TextEditingController();
 
   // Abteilungen (Marker)
   // Nur für 312/313-Logik: aktuelle Abteilungs-Auswahl
@@ -160,7 +161,8 @@ class _LueftungScreenState extends State<LueftungScreen> {
       ..addAll(_splitSet(m['verfuegbarkeit']));
     _statusVorOrt
       ..clear()
-      ..addAll(_splitSet(m['statusVorOrt']));
+      ..addAll(parseStatusVorOrtSelection(m['statusVorOrt']));
+    _ueberbautTextCtrl.text = extractUeberbautText(m['statusVorOrt']) ?? '';
 
     _abteilungen
       ..clear()
@@ -223,6 +225,8 @@ class _LueftungScreenState extends State<LueftungScreen> {
     _idNrCtrl.dispose();
     _deckelBemCtrl.dispose();
     _bemCtrl.dispose();
+    _verfuegbarkeitErgaenzenCtrl.dispose();
+    _ueberbautTextCtrl.dispose();
     super.dispose();
   }
 
@@ -455,7 +459,7 @@ class _LueftungScreenState extends State<LueftungScreen> {
         title: const Text('Beschreibung - Lüftung (L)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Hier werden Lüftungsbauwerke erfasst.\n\n'
+            'Dieses Objekt erfasst Lüftungsbauwerke.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Bauwerksdaten, Zustand und besondere Merkmale dokumentieren.\n'
@@ -684,12 +688,26 @@ class _LueftungScreenState extends State<LueftungScreen> {
                                             _statusVorOrt.add(opt);
                                           } else {
                                             _statusVorOrt.remove(opt);
+                                            if (opt == 'überbaut') {
+                                              _ueberbautTextCtrl.clear();
+                                            }
                                           }
                                         }),
                                       ),
                                     )
                                     .toList(),
                               ),
+                              if (_statusVorOrt.contains('überbaut')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _ueberbautTextCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Überbaut: Womit ist es überbaut?',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1162,6 +1180,11 @@ class _LueftungScreenState extends State<LueftungScreen> {
         ? buildSchachtDeckelartLabel(_deckel, _deckelBemCtrl.text)
         : '';
 
+    final statusVorOrtItems = buildStatusVorOrtItems(
+      _statusVorOrt,
+      ueberbautText: _ueberbautTextCtrl.text,
+    );
+
     final meta = {
       'typ': 'LÜ',
       'evnr': _session!.evnr,
@@ -1179,7 +1202,7 @@ class _LueftungScreenState extends State<LueftungScreen> {
           : '',
       'kl': _art == 'Neu' ? _kl : '',
       'verfuegbarkeit': _verfuegbarkeit.toList(),
-      'statusVorOrt': _statusVorOrt.toList(),
+      'statusVorOrt': statusVorOrtItems,
       'abteilungen': _abteilungen.toList(),
       'schaeden': _schaeden.toList(),
       'keinBefund': _keinBefund,
@@ -1219,7 +1242,10 @@ class _LueftungScreenState extends State<LueftungScreen> {
             : _verfuegbarkeit.join(', '),
         statusVorOrtLabel: _statusVorOrt.isEmpty
             ? null
-            : _statusVorOrt.join(', '),
+            : buildStatusVorOrtLabel(
+                _statusVorOrt,
+                ueberbautText: _ueberbautTextCtrl.text,
+              ),
         notizen: null,
         spezial: _art == 'Neu' ? 'Deckel: $deckelLabel | KL: $_kl' : null,
       );

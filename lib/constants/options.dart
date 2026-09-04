@@ -93,3 +93,76 @@ const List<String> kStatusSskExtra = [
   'läuft augenscheinlich ab',
   'läuft augenscheinlich nicht ab',
 ];
+
+List<String> buildStatusVorOrtItems(
+  Set<String> selected, {
+  String? ueberbautText,
+}) {
+  final normalized = <String>[];
+  for (final item in selected) {
+    final trimmed = item.trim();
+    if (trimmed.isEmpty) continue;
+    final lower = trimmed.toLowerCase();
+    if (lower == 'überbaut' || lower == 'ueberbaut') {
+      final detail = (ueberbautText ?? '').trim();
+      normalized.add(
+        detail.isEmpty ? 'überbaut' : 'überbaut: $detail',
+      );
+      continue;
+    }
+    normalized.add(trimmed);
+  }
+  return normalized;
+}
+
+String buildStatusVorOrtLabel(
+  Set<String> selected, {
+  String? ueberbautText,
+}) {
+  return buildStatusVorOrtItems(
+    selected,
+    ueberbautText: ueberbautText,
+  ).join(', ');
+}
+
+Iterable<String> _statusVorOrtItems(dynamic value) {
+  if (value == null) return const <String>[];
+  if (value is Iterable) {
+    return value
+        .map((entry) => entry.toString().trim())
+        .where((entry) => entry.isNotEmpty);
+  }
+  return value
+      .toString()
+      .split(',')
+      .map((entry) => entry.trim())
+      .where((entry) => entry.isNotEmpty);
+}
+
+Set<String> parseStatusVorOrtSelection(dynamic value) {
+  final selected = <String>{};
+  for (final item in _statusVorOrtItems(value)) {
+    final lower = item.toLowerCase();
+    if (lower == 'überbaut' ||
+        lower == 'ueberbaut' ||
+        lower.startsWith('überbaut:') ||
+        lower.startsWith('ueberbaut:')) {
+      selected.add('überbaut');
+    } else {
+      selected.add(item);
+    }
+  }
+  return selected;
+}
+
+String? extractUeberbautText(dynamic value) {
+  for (final item in _statusVorOrtItems(value)) {
+    final lower = item.toLowerCase();
+    if (lower.startsWith('überbaut:') || lower.startsWith('ueberbaut:')) {
+      final separator = item.indexOf(':');
+      final detail = item.substring(separator + 1).trim();
+      return detail.isEmpty ? null : detail;
+    }
+  }
+  return null;
+}

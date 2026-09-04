@@ -67,6 +67,7 @@ class _GrubenScreenState extends State<GrubenScreen> {
   final Set<String> _verfuegbarkeit = <String>{};
   final Set<String> _statusVorOrt = <String>{};
   final _verfuegbarkeitErgaenzenCtrl = TextEditingController();
+  final _ueberbautTextCtrl = TextEditingController();
 
   // Abteilungen (Marker)
   // Nur für 312/313-Logik: aktuelle Abteilungs-Auswahl
@@ -138,9 +139,8 @@ class _GrubenScreenState extends State<GrubenScreen> {
       _verfuegbarkeit.addAll(v.split(',').map((s) => s.trim()));
     _statusVorOrt.clear();
     final s = meta['statusVorOrt'];
-    if (s is List) _statusVorOrt.addAll(s.cast<String>());
-    if (s is String && s.isNotEmpty)
-      _statusVorOrt.addAll(s.split(',').map((t) => t.trim()));
+    _statusVorOrt.addAll(parseStatusVorOrtSelection(s));
+    _ueberbautTextCtrl.text = extractUeberbautText(s) ?? '';
 
     _abteilungen.clear();
     final ab = meta['abteilungen'];
@@ -216,6 +216,8 @@ class _GrubenScreenState extends State<GrubenScreen> {
     _wasserCtrl.dispose();
     _baujahrCtrl.dispose();
     _bemCtrl.dispose();
+    _verfuegbarkeitErgaenzenCtrl.dispose();
+    _ueberbautTextCtrl.dispose();
     super.dispose();
   }
 
@@ -526,7 +528,10 @@ class _GrubenScreenState extends State<GrubenScreen> {
       'idNr': idNr,
 
       'verfuegbarkeit': _verfuegbarkeit.toList(),
-      'statusVorOrt': _statusVorOrt.toList(),
+      'statusVorOrt': buildStatusVorOrtItems(
+        _statusVorOrt,
+        ueberbautText: _ueberbautTextCtrl.text,
+      ),
       'abteilungen': _abteilungen.toList(),
 
       'grubentyp': _grubenart,
@@ -612,7 +617,7 @@ class _GrubenScreenState extends State<GrubenScreen> {
         title: const Text('Beschreibung - Grube (VG)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Hier werden Grubenanlagen (VG) erfasst.\n\n'
+            'Dieses Objekt erfasst Grubenanlagen (VG).\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Zustands- und Ausstattungsmerkmale der Grube erfassen.\n'
@@ -823,14 +828,30 @@ class _GrubenScreenState extends State<GrubenScreen> {
                                         label: Text(opt),
                                         selected: _statusVorOrt.contains(opt),
                                         onSelected: (sel) => setState(() {
-                                          sel
-                                              ? _statusVorOrt.add(opt)
-                                              : _statusVorOrt.remove(opt);
+                                          if (sel) {
+                                            _statusVorOrt.add(opt);
+                                          } else {
+                                            _statusVorOrt.remove(opt);
+                                            if (opt == 'überbaut') {
+                                              _ueberbautTextCtrl.clear();
+                                            }
+                                          }
                                         }),
                                       ),
                                     )
                                     .toList(),
                               ),
+                              if (_statusVorOrt.contains('überbaut')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _ueberbautTextCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Überbaut: Womit ist es überbaut?',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
                             ],
                           ),
                         ),

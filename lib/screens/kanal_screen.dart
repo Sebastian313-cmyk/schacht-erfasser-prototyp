@@ -501,13 +501,13 @@ class _KanalScreenState extends State<KanalScreen> {
         title: const Text('Beschreibung - Kanal'),
         content: const SingleChildScrollView(
           child: Text(
-            'Hier werden Kanalobjekte erfasst.\n\n'
+            'Dieses Objekt erfasst Kanalobjekte.\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Kanalprofil, Zustandsangaben und Bemerkungen erfassen.\n'
             '- Medien können bei Bedarf ergänzt werden.\n\n'
             'Hinweis:\n'
-            'Gespeichert wird direkt in der App, exportiert wird gesammelt im Bericht.',
+            'Gespeichert wird direkt im Objekt, exportiert wird gesammelt im Bericht.',
           ),
         ),
         actions: [

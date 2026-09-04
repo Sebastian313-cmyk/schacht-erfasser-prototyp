@@ -83,6 +83,7 @@ class _SchieberScreenState extends State<SchieberScreen> {
   final Set<String> _verfuegbarkeit = <String>{}; // Mehrfachauswahl
   final Set<String> _statusVorOrt = <String>{}; // Mehrfachauswahl
   final _verfuegbarkeitErgaenzenCtrl = TextEditingController();
+  final _ueberbautTextCtrl = TextEditingController();
 
   // Abteilungen (Marker)
   // Nur für 312/313-Logik: aktuelle Abteilungs-Auswahl
@@ -133,7 +134,8 @@ class _SchieberScreenState extends State<SchieberScreen> {
       ..addAll(_splitSet(m['verfuegbarkeit']));
     _statusVorOrt
       ..clear()
-      ..addAll(_splitSet(m['statusVorOrt']));
+      ..addAll(parseStatusVorOrtSelection(m['statusVorOrt']));
+    _ueberbautTextCtrl.text = extractUeberbautText(m['statusVorOrt']) ?? '';
 
     _abteilungen
       ..clear()
@@ -183,6 +185,8 @@ class _SchieberScreenState extends State<SchieberScreen> {
     _posCtrl.dispose();
     _idNrCtrl.dispose();
     _bemCtrl.dispose();
+    _verfuegbarkeitErgaenzenCtrl.dispose();
+    _ueberbautTextCtrl.dispose();
     super.dispose();
   }
 
@@ -427,6 +431,11 @@ class _SchieberScreenState extends State<SchieberScreen> {
       ).showSnackBar(SnackBar(content: Text(idValidation)));
       return;
     }
+    final statusVorOrtItems = buildStatusVorOrtItems(
+      _statusVorOrt,
+      ueberbautText: _ueberbautTextCtrl.text,
+    );
+
     final meta = {
       'typ': 'SK',
       'evnr': _session!.evnr,
@@ -438,7 +447,7 @@ class _SchieberScreenState extends State<SchieberScreen> {
       'posNr': pos,
       'idNr': idNr,
       'verfuegbarkeit': _verfuegbarkeit.toList(),
-      'statusVorOrt': _statusVorOrt.toList(),
+      'statusVorOrt': statusVorOrtItems,
       'austauschErforderlich': _austausch,
       'keinBefund': _keinBefund,
       // Für Bericht/Export einheitlich als „Schäden“ ablegen
@@ -484,7 +493,10 @@ class _SchieberScreenState extends State<SchieberScreen> {
             : _verfuegbarkeit.join(', '),
         statusVorOrtLabel: _statusVorOrt.isEmpty
             ? null
-            : _statusVorOrt.join(', '),
+            : buildStatusVorOrtLabel(
+                _statusVorOrt,
+                ueberbautText: _ueberbautTextCtrl.text,
+              ),
         notizen: null,
         spezial: null,
       );
@@ -510,7 +522,11 @@ class _SchieberScreenState extends State<SchieberScreen> {
       if (idNr.isNotEmpty) 'ID-Nummer': idNr,
       if (_verfuegbarkeit.isNotEmpty)
         'Verfügbarkeit': _verfuegbarkeit.join(', '),
-      if (_statusVorOrt.isNotEmpty) 'Status vor Ort': _statusVorOrt.join(', '),
+      if (_statusVorOrt.isNotEmpty)
+        'Status vor Ort': buildStatusVorOrtLabel(
+          _statusVorOrt,
+          ueberbautText: _ueberbautTextCtrl.text,
+        ),
       'Schaden': schaden,
       'Bemerkung': bemerkung.isEmpty ? '—' : bemerkung,
     };
@@ -572,7 +588,7 @@ class _SchieberScreenState extends State<SchieberScreen> {
         title: const Text('Beschreibung - Schieberkappen (SK)'),
         content: const SingleChildScrollView(
           child: Text(
-            'Hier werden Schieberkappen (SK) erfasst.\n\n'
+            'Dieses Objekt erfasst Schieberkappen (SK).\n\n'
             'Wichtig:\n'
             '- Pflichtfeld ist die Positionsnummer.\n'
             '- Bauart, Zustand und ergänzende Angaben erfassen.\n'
@@ -797,12 +813,26 @@ class _SchieberScreenState extends State<SchieberScreen> {
                                             _statusVorOrt.add(opt);
                                           } else {
                                             _statusVorOrt.remove(opt);
+                                            if (opt == 'überbaut') {
+                                              _ueberbautTextCtrl.clear();
+                                            }
                                           }
                                         }),
                                       ),
                                     )
                                     .toList(),
                               ),
+                              if (_statusVorOrt.contains('überbaut')) ...[
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _ueberbautTextCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Überbaut: Womit ist es überbaut?',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 2,
+                                ),
+                              ],
                             ],
                           ),
                         ),
