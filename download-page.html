@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erfasser App - Downloads</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .version {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .version .badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .releases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .release-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .release-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+        
+        .release-card .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .release-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        
+        .release-card .size {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-web {
+            background: #4CAF50;
+        }
+        
+        .btn-web:hover {
+            background: #45a049;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 5px;
+        }
+        
+        .info-box h4 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            color: #555;
+        }
+        
+        .info-box li {
+            margin: 5px 0;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            .releases {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Erfasser App</h1>
+        <div class="version">
+            Version <span id="version">1.1.0</span>
+            <div class="badge">Neueste Version</div>
+        </div>
+        
+        <div class="releases">
+            <!-- Web -->
+            <div class="release-card">
+                <div class="icon">🌐</div>
+                <h3>Web-Version</h3>
+                <div class="size">Instant Start</div>
+                <a href="./web/" class="btn btn-web">Jetzt starten</a>
+            </div>
+            
+            <!-- Android -->
+            <div class="release-card">
+                <div class="icon">🤖</div>
+                <h3>Android</h3>
+                <div class="size">~25 MB</div>
+                <a href="./erfasser-app.apk" class="btn" download>APK Download</a>
+            </div>
+            
+            <!-- Windows -->
+            <div class="release-card">
+                <div class="icon">🪟</div>
+                <h3>Windows</h3>
+                <div class="size">~45 MB</div>
+                <a href="./erfasser-app-setup.exe" class="btn" download>Installer Download</a>
+            </div>
+            
+            <!-- Linux -->
+            <div class="release-card">
+                <div class="icon">🐧</div>
+                <h3>Linux</h3>
+                <div class="size">~40 MB</div>
+                <a href="./erfasser-app.AppImage" class="btn" download>AppImage Download</a>
+            </div>
+            
+            <!-- macOS -->
+            <div class="release-card">
+                <div class="icon">🍏</div>
+                <h3>macOS</h3>
+                <div class="size">~50 MB</div>
+                <a href="./erfasser-app.dmg" class="btn" download>DMG Download</a>
+            </div>
+            
+            <!-- iOS -->
+            <div class="release-card">
+                <div class="icon">🍎</div>
+                <h3>iOS</h3>
+                <div class="size">TestFlight</div>
+                <a href="https://testflight.apple.com/join/YOUR_CODE" class="btn">TestFlight öffnen</a>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <h4>📋 Installation</h4>
+            <ul>
+                <li><strong>Android:</strong> "Installation aus unbekannten Quellen" aktivieren, dann APK öffnen</li>
+                <li><strong>Windows:</strong> Installer ausführen und den Anweisungen folgen</li>
+                <li><strong>Linux:</strong> <code>chmod +x erfasser-app.AppImage</code> dann ausführen</li>
+                <li><strong>macOS:</strong> DMG öffnen und App in Programme-Ordner ziehen</li>
+                <li><strong>Web:</strong> Funktioniert direkt im Browser (Chrome, Edge, Firefox, Safari)</li>
+            </ul>
+        </div>
+        
+        <div class="info-box" style="background: #fff3e0; border-color: #ff9800;">
+            <h4>🔄 Automatische Updates</h4>
+            <p style="color: #555;">Die App prüft automatisch auf neue Versionen und benachrichtigt Sie, wenn ein Update verfügbar ist.</p>
+        </div>
+        
+        <footer>
+            <p>Erfasser App &copy; 2025 | <span id="build-date">09.01.2025</span></p>
+            <p style="margin-top: 5px;">
+                <a href="../version.json" style="color: #667eea;">📄 Version-Info (JSON)</a>
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        // Version automatisch aus version.json laden
+        fetch('../version.json')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('version').textContent = data.version;
+                document.getElementById('build-date').textContent = data.releaseDate || '09.01.2025';
+            })
+            .catch(error => {
+                console.log('Version konnte nicht geladen werden:', error);
+            });
+    </script>
+</body>
+</html>

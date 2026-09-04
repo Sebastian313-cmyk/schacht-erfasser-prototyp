@@ -1,0 +1,43 @@
+{
+  "version": "1.1.0",
+  "buildNumber": 2,
+  "releaseDate": "2025-01-09",
+  "releaseNotes": "✨ Neue Features:\n- Export-Funktion als ZIP\n- Verbesserte Filter\n- Performance-Optimierungen\n\n🐛 Bugfixes:\n- Sortierung korrigiert\n- Media-Export stabilisiert",
+  "forceUpdate": false,
+  "platforms": {
+    "android": {
+      "downloadUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app.apk",
+      "minVersion": "1.0.0",
+      "fileSize": "25 MB",
+      "checksum": "sha256:abc123..."
+    },
+    "ios": {
+      "downloadUrl": "https://testflight.apple.com/join/YOUR_CODE",
+      "minVersion": "1.0.0",
+      "alternativeUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app.ipa"
+    },
+    "windows": {
+      "downloadUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app-setup.exe",
+      "msixUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app.msix",
+      "minVersion": "1.0.0",
+      "fileSize": "45 MB"
+    },
+    "linux": {
+      "downloadUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app.AppImage",
+      "debUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app.deb",
+      "rpmUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app.rpm",
+      "minVersion": "1.0.0",
+      "fileSize": "40 MB"
+    },
+    "macos": {
+      "downloadUrl": "https://your-server.com/erfasser-app/downloads/erfasser-app.dmg",
+      "minVersion": "1.0.0",
+      "fileSize": "50 MB",
+      "requiresRosetta": false
+    },
+    "web": {
+      "cacheBustingEnabled": true,
+      "serviceWorkerVersion": "v1.1.0"
+    }
+  }
+}
