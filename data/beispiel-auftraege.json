@@ -1,0 +1,86 @@
+[
+  {
+    "id": "test-001",
+    "fiktiv": true,
+    "auftragsnummer": "BU-M-TEST-2026-0142",
+    "auftragsart": "Maurer",
+    "strasse": "Ahornweg",
+    "hausnummer": "12",
+    "weitergebendeAbteilung": "312 Kanalinspektion",
+    "eingangsdatum": "2026-11-03",
+    "terminauftrag": false,
+    "ausfuehrungstermin": "",
+    "bearbeitungsstand": "in Arbeit",
+    "personal": ["Muster", "Beispiel"],
+    "wetter": "bedeckt",
+    "temperatur": "7 °C",
+    "einstiegserlaubnis": { "erforderlich": null, "bezirk": "" },
+    "objekte": [
+      {
+        "objektart": "Einstieg",
+        "objektId": "E-TEST-4711",
+        "dn": "",
+        "befund": "Rahmen der Schachtabdeckung gerissen, Abdeckung klappert bei Überfahrt. Zwei Steigeisen locker.",
+        "arbeit": "Rahmen neu setzen, Steigeisen befestigen"
+      }
+    ],
+    "medien": [{ "name": "foto-rahmen.jpg", "beschreibung": "Riss im Rahmen, Fahrbahnseite" }],
+    "notizen": "Liegt in der Fahrspur, Busverkehr."
+  },
+  {
+    "id": "test-002",
+    "fiktiv": true,
+    "auftragsnummer": "BU-M-TEST-2026-0143",
+    "auftragsart": "Sanierung",
+    "strasse": "Lindenstraße",
+    "hausnummer": "",
+    "weitergebendeAbteilung": "313 BU-BS",
+    "eingangsdatum": "2026-11-05",
+    "terminauftrag": true,
+    "ausfuehrungstermin": "",
+    "bearbeitungsstand": "neu",
+    "personal": [],
+    "wetter": "",
+    "temperatur": "",
+    "einstiegserlaubnis": { "erforderlich": null, "bezirk": "" },
+    "objekte": [
+      {
+        "objektart": "Kanal",
+        "objektId": "K-TEST-0815",
+        "dn": "",
+        "befund": "Wurzeleinwuchs und Längsriss laut Inspektion",
+        "arbeit": ""
+      }
+    ],
+    "medien": [],
+    "notizen": ""
+  },
+  {
+    "id": "test-003",
+    "fiktiv": true,
+    "auftragsnummer": "",
+    "auftragsart": "Maurer",
+    "strasse": "Am Mühlbach",
+    "hausnummer": "3",
+    "weitergebendeAbteilung": "",
+    "eingangsdatum": "2026-11-08",
+    "terminauftrag": false,
+    "ausfuehrungstermin": "",
+    "bearbeitungsstand": "neu",
+    "personal": ["Muster"],
+    "wetter": "Regen",
+    "temperatur": "5 °C",
+    "einstiegserlaubnis": { "erforderlich": false, "bezirk": "" },
+    "objekte": [
+      {
+        "objektart": "Straßensinkkasten",
+        "objektId": "",
+        "dn": "",
+        "befund": "Aufsatz abgesackt",
+        "arbeit": "Aufsatz neu setzen"
+      }
+    ],
+    "medien": [],
+    "notizen": "Pfütze auf Gehweg, Stolpergefahr."
+  }
+]

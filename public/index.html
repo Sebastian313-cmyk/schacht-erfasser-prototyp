@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KI31 Pilot</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="kopf">
+    <div class="marke"><strong>KI31</strong> <span>Pilot · Kanalbetrieb 31 · fiktive Testdaten</span></div>
+    <div class="kopf-steuerung">
+      <span id="modus" class="abzeichen">…</span>
+      <label>Ansicht
+        <select id="rolle">
+          <option value="fuehrungskraft">Führungskraft</option>
+          <option value="mitarbeitende">Mitarbeitende</option>
+        </select>
+      </label>
+      <button id="auswertung-oeffnen" class="leise">Auswertung</button>
+    </div>
+  </header>
+
+  <main class="raster">
+    <nav class="spalte auftraege" aria-label="Aufträge">
+      <h2>Aufträge BU-M</h2>
+      <ul id="auftragsliste"></ul>
+      <button id="zuruecksetzen" class="leise klein">Beispieldaten zurücksetzen</button>
+    </nav>
+
+    <section class="spalte auftrag" aria-label="Auftrag">
+      <form id="auftrag-form" autocomplete="off">
+        <div class="zeile-titel">
+          <h2 id="auftrag-titel">Auftrag</h2>
+          <button type="submit">Speichern</button>
+        </div>
+        <div class="felder">
+          <label>Auftragsnummer <input name="auftragsnummer"></label>
+          <label>Auftragsart
+            <select name="auftragsart"><option value="">–</option><option>Maurer</option><option>Sanierung</option></select>
+          </label>
+          <label>Straße <input name="strasse"></label>
+          <label>Hausnummer <input name="hausnummer"></label>
+          <label>Weitergebende Abteilung <input name="weitergebendeAbteilung"></label>
+          <label>Eingangsdatum <input name="eingangsdatum" type="date"></label>
+          <label class="haken"><input name="terminauftrag" type="checkbox"> Terminauftrag</label>
+          <label>Ausführungstermin <input name="ausfuehrungstermin" type="date"></label>
+          <label>Bearbeitungsstand
+            <select name="bearbeitungsstand"><option>neu</option><option>in Arbeit</option><option>abgeschlossen</option></select>
+          </label>
+          <label>Personal (Nachnamen, Komma) <input name="personal"></label>
+          <label>Wetter <input name="wetter"></label>
+          <label>Temperatur <input name="temperatur"></label>
+          <label>Einstiegserlaubnis
+            <select name="ee_erforderlich">
+              <option value="">nicht entschieden</option><option value="ja">erforderlich</option><option value="nein">nicht erforderlich</option>
+            </select>
+          </label>
+          <label>Bezirk
+            <select name="ee_bezirk"><option value="">–</option><option>West</option><option>Ost</option></select>
+          </label>
+        </div>
+
+        <h3>Objekte</h3>
+        <div id="objekte"></div>
+        <button type="button" id="objekt-neu" class="leise klein">+ Objekt</button>
+
+        <h3>Medien</h3>
+        <p class="hinweis">Im Pilot nur Dateiname und Beschreibung, keine echten Fotos.</p>
+        <div id="medien"></div>
+        <button type="button" id="medium-neu" class="leise klein">+ Medium</button>
+
+        <label class="breit">Notizen <textarea name="notizen" rows="2"></textarea></label>
+      </form>
+
+      <section id="meldeschein" class="meldeschein" hidden>
+        <div class="zeile-titel">
+          <h2>Meldeschein</h2>
+          <span id="ms-quelle" class="abzeichen"></span>
+        </div>
+        <p class="hinweis">Entwurf prüfen und ändern. Die Weitergabe entscheidet die zuständige Person.</p>
+        <div class="felder">
+          <label>Empfänger <select name="empfaenger" id="ms-empfaenger"></select></label>
+          <label>Dringlichkeit <select name="dringlichkeit" id="ms-dringlichkeit"></select></label>
+          <label class="breit">Angeforderte Leistung <textarea id="ms-angeforderteLeistung" rows="2"></textarea></label>
+          <label class="breit">Begründung / Befund <textarea id="ms-begruendung" rows="3"></textarea></label>
+          <label>Ortsangabe <input id="ms-ortsangabe"></label>
+          <label>Objektbezug <input id="ms-objektbezug"></label>
+          <label class="breit">Hinweise (eine Zeile je Hinweis) <textarea id="ms-hinweise" rows="2"></textarea></label>
+          <label class="breit">Offene Punkte (eine Zeile je Punkt) <textarea id="ms-offenePunkte" rows="3"></textarea></label>
+        </div>
+        <div class="aktionen">
+          <label>Entwurf brauchbar?
+            <select id="ms-brauchbar"><option value="">–</option><option value="ja">ja</option><option value="teilweise">teilweise</option><option value="nein">nein</option></select>
+          </label>
+          <button id="ms-uebernehmen">Meldeschein übernehmen</button>
+          <button id="ms-verwerfen" class="leise">Verwerfen</button>
+        </div>
+        <p id="ms-meldung" class="meldung" role="status"></p>
+      </section>
+    </section>
+
+    <aside class="spalte ki" aria-label="KI31">
+      <h2>KI31 <span id="agent" class="abzeichen leise-abz"></span></h2>
+      <div class="werkzeuge">
+        <button data-werkzeug="auftrag_zusammenfassen" class="leise">Zusammenfassen</button>
+        <button data-werkzeug="fehlende_angaben" class="leise">Fehlende Angaben</button>
+        <button data-werkzeug="meldeschein_entwerfen">Meldeschein entwerfen</button>
+      </div>
+      <div class="messmodus">
+        <label>Messdurchlauf
+          <select id="messmodus"><option value="mit KI">mit KI</option><option value="ohne KI">ohne KI (leeres Formular)</option></select>
+        </label>
+        <button id="ohne-ki-start" class="leise klein" hidden>Leeren Meldeschein beginnen</button>
+        <span id="stoppuhr" class="stoppuhr" aria-live="off"></span>
+      </div>
+      <ol id="verlauf" class="verlauf" aria-live="polite"></ol>
+      <form id="chat-form" class="chat-eingabe">
+        <textarea id="chat-text" rows="2" placeholder="Frage an KI31 – z. B. „Entwirf einen Meldeschein“"></textarea>
+        <div class="chat-knoepfe">
+          <button type="button" id="diktat" class="leise" title="Spracheingabe">🎤</button>
+          <button type="submit">Senden</button>
+        </div>
+      </form>
+      <p id="diktat-hinweis" class="hinweis" hidden></p>
+    </aside>
+  </main>
+
+  <dialog id="auswertung">
+    <h2>Auswertung: Auftrag → übernommener Meldeschein</h2>
+    <div id="auswertung-inhalt"></div>
+    <form method="dialog"><button>Schließen</button></form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

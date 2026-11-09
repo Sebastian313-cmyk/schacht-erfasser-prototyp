@@ -1,0 +1,13 @@
+{
+  "name": "ki31-pilot",
+  "version": "0.1.0",
+  "description": "KI31 – lokaler KI-Assistent für den Kanalbetrieb 31 (Pilot mit fiktiven Daten)",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/server.js",
+    "demo": "KI31_MODUS=demo node server/server.js",
+    "test": "node --test test/*.test.js"
+  }
+}
