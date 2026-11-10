@@ -211,8 +211,9 @@ function meldescheinVorlage(a) {
 export async function chatAntwort({ auftrag, verlauf = [], agent = '313', modus, beiText }) {
   if (modus !== 'ollama') {
     beiText(
-      'Demo-Modus: Es ist kein lokales Sprachmodell aktiv. Ich kann trotzdem die Werkzeuge ausführen – ' +
-        'zum Beispiel „Meldeschein entwerfen“, „Fehlende Angaben prüfen“ oder „Auftrag zusammenfassen“.'
+      'Demo-Modus: Kein lokales Sprachmodell aktiv, KI31 versteht nur feste Formulierungen. Beispiele: ' +
+        '„DN ist 300, Bezirk Ost, Einstiegserlaubnis brauchen wir“, „Welche Angaben fehlen?“, ' +
+        '„Entwirf den Meldeschein“, „Einstiegserlaubnis vorbereiten“, „Reinigung vorher anfragen“.'
     );
     return;
   }

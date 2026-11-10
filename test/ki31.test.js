@@ -7,6 +7,8 @@ import path from 'node:path';
 
 // Gefälschter Ollama-Server, damit die Modellanbindung ohne echtes Modell getestet wird.
 let ollamaAntwort = {};
+let ollamaPlan = { schritte: [], luecke: '', antwort: '' };
+let ollamaWerkzeug = null;
 const ollamaAnfragen = [];
 const ollama = createServer(async (req, res) => {
   let text = '';
@@ -22,7 +24,10 @@ const ollama = createServer(async (req, res) => {
     res.write(JSON.stringify({ message: { content: 'aus dem Modell.' } }) + '\n');
     res.end(JSON.stringify({ done: true }) + '\n');
   } else {
-    res.end(JSON.stringify({ message: { content: JSON.stringify(ollamaAntwort) } }));
+    const istPlan = Boolean(body.format?.properties?.schritte);
+    const istWerkstatt = /Werkstatt/.test(body.messages[0].content);
+    const inhalt = istPlan ? ollamaPlan : istWerkstatt ? ollamaWerkzeug : ollamaAntwort;
+    res.end(JSON.stringify({ message: { content: typeof inhalt === 'string' ? inhalt : JSON.stringify(inhalt) } }));
   }
 });
 
@@ -70,15 +75,42 @@ test('Prüfregeln erkennen fehlende Pflichtangaben', async () => {
   assert.ok(!r3.includes('einstiegserlaubnis'), 'Sinkkasten braucht keine Klärung');
 });
 
-test('Fachagent wird nach Stichworten und Auftrag gewählt', async () => {
-  const { waehleAgent, erkenneWerkzeug } = await import('../server/agenten.js');
+test('Fachagent wird nach Stichworten gewählt', async () => {
+  const { waehleAgent } = await import('../server/agenten.js');
   assert.equal(waehleAgent('Brauchen wir eine Einstiegserlaubnis und Arbeitssicherheit?'), '311');
   assert.equal(waehleAgent('Muss vorher gespült und eine Inspektion gemacht werden?'), '312');
-  assert.equal(waehleAgent('Hallo', { auftragsart: 'Maurer' }), '313');
-  assert.equal(erkenneWerkzeug('Bitte entwirf einen Meldeschein'), 'meldeschein_entwerfen');
-  assert.equal(erkenneWerkzeug('Welche Angaben fehlen noch?'), 'fehlende_angaben');
-  assert.equal(erkenneWerkzeug('Fass den Auftrag zusammen'), 'auftrag_zusammenfassen');
-  assert.equal(erkenneWerkzeug('Wie ist das Wetter?'), null);
+  assert.equal(waehleAgent('Hallo'), '313');
+});
+
+test('Verstehen ohne Modell: Sätze werden zu Arbeitsschritten', async () => {
+  const { verstehe } = await import('../server/verstehen.js');
+  const [, kanalAuftrag] = await beispiele();
+  const p = verstehe('DN ist 300, Bezirk Ost, Einstiegserlaubnis brauchen wir. Termin am 20.11.2026', kanalAuftrag);
+  const felder = p.schritte.find((s) => s.werkzeug === 'felder_setzen').parameter.aenderungen;
+  assert.deepEqual(felder.find((a) => a.feld === 'objekte.0.dn'), { feld: 'objekte.0.dn', wert: '300' });
+  assert.ok(felder.some((a) => a.feld === 'einstiegserlaubnis.bezirk' && a.wert === 'Ost'));
+  assert.ok(felder.some((a) => a.feld === 'einstiegserlaubnis.erforderlich' && a.wert === true));
+  assert.ok(felder.some((a) => a.feld === 'ausfuehrungstermin' && a.wert === '20.11.2026'));
+  assert.equal(verstehe('Bitte entwirf einen Meldeschein').schritte[0].werkzeug, 'meldeschein_entwerfen');
+  assert.equal(verstehe('Wir brauchen vorher eine TV-Inspektion, bitte anfragen').schritte[0].parameter.art, 'inspektion');
+  assert.equal(verstehe('Fass den Auftrag zusammen').schritte[0].werkzeug, 'auftrag_zusammenfassen');
+  assert.equal(verstehe('Erstelle eine Materialliste für die Baustelle').luecke, 'Erstelle eine Materialliste für die Baustelle');
+  assert.equal(verstehe('Wie ist das Wetter?').luecke, null);
+});
+
+test('Feldänderungen werden geprüft und nur vorgeschlagen', async () => {
+  const { pruefeAenderungen } = await import('../server/felder.js');
+  const [auftrag] = await beispiele();
+  const r = pruefeAenderungen(auftrag, [
+    { feld: 'einstiegserlaubnis.bezirk', wert: 'ost' },
+    { feld: 'ausfuehrungstermin', wert: '1.12.2026' },
+    { feld: 'id', wert: 'gehackt' },
+    { feld: 'auftragsart', wert: 'Bagger' },
+    { feld: 'strasse', wert: 'Ahornweg' }
+  ]);
+  assert.deepEqual(r.aenderungen.map((a) => [a.feld, a.neu]), [['einstiegserlaubnis.bezirk', 'Ost'], ['ausfuehrungstermin', '2026-12-01']]);
+  assert.equal(r.ungueltig.length, 2, 'unerlaubtes Feld und ungültiger Wert');
+  assert.equal(auftrag.einstiegserlaubnis.bezirk, '', 'Auftrag selbst bleibt unverändert');
 });
 
 test('Meldeschein-Entwurf: ungültige Werte werden bereinigt, Prüfregeln ergänzt', async () => {
@@ -118,19 +150,104 @@ test('31C: Mitarbeitende dürfen keinen Meldeschein entwerfen oder übernehmen',
   assert.equal(r3.status, 200);
 });
 
-test('Chat streamt Modellantwort und erkennt Werkzeuge', async () => {
-  const [auftrag] = await beispiele();
-  const lesen = async (res) => (await res.text()).trim().split('\n').map((z) => JSON.parse(z));
-  const e1 = await lesen(await anfrage('/api/ki/chat', { daten: { auftrag, verlauf: [{ rolle: 'user', text: 'Was ist hier los?' }] } }));
-  assert.equal(e1[0].typ, 'agent');
-  assert.equal(e1.filter((e) => e.typ === 'text').map((e) => e.text).join(''), 'Hallo aus dem Modell.');
-  assert.equal(e1.at(-1).typ, 'ende');
+const lesen = async (res) => (await res.text()).trim().split('\n').map((z) => JSON.parse(z));
 
-  ollamaAntwort = { hinweise: ['Lage des Risses genauer angeben'] };
-  const e2 = await lesen(await anfrage('/api/ki/chat', { daten: { auftrag, verlauf: [{ rolle: 'user', text: 'Welche Angaben fehlen noch?' }] } }));
-  const w = e2.find((e) => e.typ === 'werkzeug');
-  assert.equal(w.werkzeug, 'fehlende_angaben');
-  assert.deepEqual(w.ergebnis.hinweise, ['Lage des Risses genauer angeben']);
+test('Gehirn: Modellplan wird an Agenten verteilt, unbekannte Werkzeuge verworfen', async () => {
+  const [, auftrag] = await beispiele();
+  ollamaPlan = {
+    schritte: [
+      { werkzeug: 'felder_setzen', parameter: { aenderungen: [{ feld: 'objekte.0.dn', wert: '300' }, { feld: 'einstiegserlaubnis.bezirk', wert: 'Ost' }] } },
+      { werkzeug: 'einstiegserlaubnis_vorbereiten', parameter: {} },
+      { werkzeug: 'datenbank_loeschen', parameter: {} }
+    ],
+    luecke: '',
+    antwort: ''
+  };
+  const e = await lesen(await anfrage('/api/ki31/anliegen', { daten: { anliegen: 'DN 300, Bezirk Ost, Antrag vorbereiten', auftrag } }));
+  const werkzeuge = e.filter((x) => x.typ === 'werkzeug');
+  assert.deepEqual(werkzeuge.map((w) => [w.werkzeug, w.agent]), [['felder_setzen', 'KI31'], ['einstiegserlaubnis_vorbereiten', '311']]);
+  assert.equal(werkzeuge[0].ergebnis.aenderungen.length, 2);
+  assert.equal(werkzeuge[1].ergebnis.antrag.bezirk, 'Ost', 'Agent 311 arbeitet mit den vorgeschlagenen Werten weiter');
+  assert.ok(e.some((x) => x.typ === 'naechster'));
+  assert.equal(e.at(-1).typ, 'ende');
+});
+
+test('Gehirn: reine Frage wird beantwortet, 31C sperrt Werkzeuge für Mitarbeitende', async () => {
+  const [auftrag] = await beispiele();
+  ollamaPlan = { schritte: [], luecke: '', antwort: '' };
+  const e1 = await lesen(await anfrage('/api/ki31/anliegen', { daten: { anliegen: 'Was ist hier los?', auftrag } }));
+  assert.equal(e1.filter((x) => x.typ === 'text').map((x) => x.text).join(''), 'Hallo aus dem Modell.');
+
+  ollamaPlan = { schritte: [{ werkzeug: 'meldeschein_entwerfen', parameter: {} }], luecke: '', antwort: '' };
+  const e2 = await lesen(await anfrage('/api/ki31/anliegen', { rolle: 'mitarbeitende', daten: { anliegen: 'Meldeschein bitte', auftrag } }));
+  assert.ok(!e2.some((x) => x.typ === 'werkzeug'));
+  assert.ok(e2.some((x) => x.typ === 'text' && /nicht freigegeben \(31C\)/.test(x.text)));
+});
+
+test('Werkstatt: Lücke → Entwurf → Test → Freigabe durch 31C → Nutzung → Widerruf', async () => {
+  const [auftrag] = await beispiele();
+  ollamaPlan = { schritte: [], luecke: 'Materialliste für die Baustelle erstellen', antwort: '' };
+  ollamaWerkzeug = {
+    name: 'materialliste',
+    titel: 'Materialliste Baustelle',
+    beschreibung: 'Erstellt eine Materialliste',
+    agent: '311',
+    stichworte: ['materialliste'],
+    art: 'vorlage',
+    vorlage: 'Materialliste für {{auftragsnummer}} – {{objekte.0.objektart}} {{objekte.0.objektId}}: {{objekte.0.arbeit}}',
+    tests: [{ auftragId: 'test-001', erwartet: { enthaelt: ['E-TEST-4711'] } }]
+  };
+  const e = await lesen(await anfrage('/api/ki31/anliegen', { daten: { anliegen: 'Erstelle eine Materialliste für die Baustelle', auftrag } }));
+  const luecke = e.find((x) => x.typ === 'luecke');
+  assert.ok(luecke, 'Lücke wird gemeldet');
+  assert.equal(luecke.agent, '313', 'zuständiger Agent baut, nicht der vom Modell genannte');
+  assert.equal(luecke.eintrag.status, 'geprueft');
+
+  const liste = await (await anfrage('/api/werkstatt', { rolle: 'it31c' })).json();
+  const eintrag = liste.eintraege.find((x) => x.id === luecke.eintrag.id);
+  assert.equal(eintrag.spec.name, 'ws_materialliste');
+  assert.equal(eintrag.spec.agent, '313');
+  assert.ok(eintrag.testergebnis.bestanden);
+
+  // Noch nicht freigegeben → nicht nutzbar
+  const vorher = await (await anfrage('/api/status')).json();
+  assert.ok(!vorher.werkzeuge.some((w) => w.name === 'ws_materialliste'));
+
+  // Nur 31C darf freigeben
+  assert.equal((await anfrage(`/api/werkstatt/${eintrag.id}/freigeben`, { rolle: 'fuehrungskraft', daten: { rollen: ['fuehrungskraft'] } })).status, 403);
+  assert.equal((await anfrage(`/api/werkstatt/${eintrag.id}/freigeben`, { rolle: 'it31c', daten: { rollen: ['fuehrungskraft'] } })).status, 200);
+
+  // Jetzt nutzt KI31 das Werkzeug – ohne Modellplan, über die Stichworte
+  ollamaPlan = { schritte: [{ werkzeug: 'ws_materialliste', parameter: {} }], luecke: '', antwort: '' };
+  const e2 = await lesen(await anfrage('/api/ki31/anliegen', { daten: { anliegen: 'Materialliste bitte', auftrag } }));
+  const w = e2.find((x) => x.typ === 'werkzeug');
+  assert.equal(w.quelle, 'werkstatt');
+  assert.match(w.ergebnis.text, /BU-M-TEST-2026-0142 – Einstieg E-TEST-4711/);
+  const e3 = await lesen(await anfrage('/api/ki31/anliegen', { rolle: 'mitarbeitende', daten: { anliegen: 'Materialliste bitte', auftrag } }));
+  assert.ok(!e3.some((x) => x.typ === 'werkzeug'), 'nur für Führungskraft freigegeben');
+
+  // Widerruf
+  assert.equal((await anfrage(`/api/werkstatt/${eintrag.id}/widerrufen`, { rolle: 'it31c', daten: {} })).status, 200);
+  const nachher = await (await anfrage('/api/status')).json();
+  assert.ok(!nachher.werkzeuge.some((w) => w.name === 'ws_materialliste'));
+});
+
+test('Werkstatt: unsichere oder fehlerhafte Entwürfe werden abgelehnt', async () => {
+  const { pruefeSpec, testeSpec } = await import('../server/werkstatt.js');
+  const basis = { name: 'ws_test_x', titel: 'T', agent: '312', stichworte: ['x'], art: 'vorlage', vorlage: '{{strasse}}', tests: [{ auftragId: 'test-001', erwartet: { enthaelt: ['Ahornweg'] } }] };
+  assert.deepEqual(pruefeSpec(basis), []);
+  assert.ok(pruefeSpec({ ...basis, vorlage: '{{constructor.prototype}}' }).some((f) => f.includes('nicht erlaubt')));
+  assert.ok(pruefeSpec({ ...basis, art: 'javascript' }).length > 0);
+  assert.ok(pruefeSpec({ ...basis, agent: 'root' }).length > 0);
+  assert.ok(pruefeSpec({ ...basis, art: 'felder', aenderungen: [{ feld: 'id', wert: 'x' }] }).some((f) => f.includes('darf nicht')));
+  assert.ok(pruefeSpec({ ...basis, tests: [] }).length > 0);
+  const t = await testeSpec({ ...basis, tests: [{ auftragId: 'test-001', erwartet: { enthaelt: ['Lindenstraße'] } }] });
+  assert.equal(t.bestanden, false);
+  const pruef = await testeSpec({
+    ...basis, art: 'pruefung', regeln: [{ feld: 'objekte.0.objektId', bedingung: 'leer', meldung: 'Objekt-ID fehlt in {{strasse}}', stufe: 'fehlt' }],
+    tests: [{ auftragId: 'test-003', erwartet: { anzahlBefunde: 1, enthaelt: ['Am Mühlbach'] } }, { auftragId: 'test-001', erwartet: { anzahlBefunde: 0 } }]
+  });
+  assert.equal(pruef.bestanden, true);
 });
 
 test('Übernahme speichert Meldeschein und Messung, Auswertung bildet Median', async () => {

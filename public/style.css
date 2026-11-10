@@ -103,3 +103,23 @@ dialog { border: 1px solid var(--linie); border-radius: 10px; background: var(--
 dialog table { border-collapse: collapse; width: 100%; font-size: .9rem; margin-bottom: 1rem; }
 dialog th, dialog td { text-align: left; padding: .3rem .5rem; border-bottom: 1px solid var(--linie); }
 dialog td.zahl, dialog th.zahl { text-align: right; font-variant-numeric: tabular-nums; }
+
+.zaehler { display: inline-block; min-width: 1.3em; padding: 0 .3em; border-radius: 99px; background: var(--warn); color: var(--flaeche); font-size: .75rem; text-align: center; }
+.plan { font-size: .8rem; color: var(--leise); }
+.kasten { display: grid; gap: 6px; }
+.kasten .zeilen { display: grid; gap: 4px; }
+.kasten label.haken { color: var(--text); font-size: .85rem; }
+.kasten .alt { color: var(--leise); text-decoration: line-through; }
+.kasten .knopfzeile { display: flex; flex-wrap: wrap; gap: 6px; }
+.naechste { display: flex; flex-wrap: wrap; gap: 6px; }
+.werkstatt-dialog { width: min(900px, calc(100vw - 32px)); }
+.ws-eintrag { border: 1px solid var(--linie); border-radius: 8px; padding: 10px; margin-bottom: 10px; display: grid; gap: 6px; }
+.ws-kopf { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+.ws-eintrag textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; }
+.ws-eintrag ul { margin: 0; padding-left: 1.1rem; font-size: .85rem; }
+.st-vorschlag, .st-entwurf { background: var(--warn-grund); color: var(--warn); }
+.st-geprueft { background: var(--ok-grund); }
+.st-freigegeben { background: var(--akzent); color: var(--akzent-text); }
+.st-widerrufen, .st-verworfen { background: var(--fehler-grund); color: var(--fehler); }
+.ok { color: var(--akzent); }
+.nok { color: var(--fehler); }

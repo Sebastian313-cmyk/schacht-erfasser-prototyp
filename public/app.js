@@ -203,30 +203,95 @@ function zeile(rolleName, inhalt) {
 }
 const systemZeile = (text) => zeile('system', text);
 
+function setzeFeld(obj, feld, wert) {
+  const teile = feld.split('.');
+  let o = obj;
+  for (let i = 0; i < teile.length - 1; i++) {
+    if (o[teile[i]] == null) o[teile[i]] = /^\d+$/.test(teile[i + 1]) ? [] : {};
+    o = o[teile[i]];
+  }
+  o[teile.at(-1)] = wert;
+}
+const anzeigeWert = (w) => (w === true ? 'ja' : w === false ? 'nein' : Array.isArray(w) ? w.join(', ') : w === '' || w == null ? '–' : String(w));
+
+function zeigeAenderungen(ergebnis) {
+  const box = el('div', { klasse: 'kasten' });
+  if (!ergebnis.aenderungen.length) box.append(el('span', { text: 'Keine neuen Werte – die Angaben stehen schon so im Auftrag.' }));
+  else {
+    box.append(el('strong', { text: `${ergebnis.aenderungen.length} Feld(er) ausfüllen – bitte bestätigen` }));
+    const zeilen = el('div', { klasse: 'zeilen' });
+    ergebnis.aenderungen.forEach((a, i) => {
+      const haken = el('input', { type: 'checkbox', 'data-i': i });
+      haken.checked = true;
+      zeilen.append(el('label', { klasse: 'haken' }, haken, document.createTextNode(`${a.titel}: `), el('span', { klasse: 'alt', text: anzeigeWert(a.alt) }), document.createTextNode(` → ${anzeigeWert(a.neu)}`)));
+    });
+    const knopf = el('button', { type: 'button', text: 'Bestätigen und speichern' });
+    knopf.addEventListener('click', async () => {
+      const gewaehlt = [...zeilen.querySelectorAll('input:checked')].map((h) => ergebnis.aenderungen[h.dataset.i]);
+      leseMaske();
+      for (const a of gewaehlt) setzeFeld(zustand.aktiv, a.feld, a.neu);
+      try {
+        await api('/api/auftraege', { methode: 'PUT', daten: zustand.aktiv });
+        const id = zustand.aktiv.id;
+        const kopie = structuredClone(zustand.aktiv);
+        zustand.auftraege = zustand.auftraege.map((x) => (x.id === id ? kopie : x));
+        zeigeAuftrag();
+        zeigeListe();
+        box.replaceChildren(el('span', { text: `${gewaehlt.length} Feld(er) übernommen und gespeichert.` }));
+      } catch (f) {
+        box.append(el('span', { klasse: 'nok', text: f.message }));
+      }
+    });
+    box.append(zeilen, el('div', { klasse: 'knopfzeile' }, knopf, el('button', { type: 'button', klasse: 'leise', text: 'Verwerfen', onclick: () => box.replaceChildren(el('span', { text: 'Vorschlag verworfen.' })) })));
+  }
+  if (ergebnis.ungueltig?.length)
+    box.append(el('ul', {}, ...ergebnis.ungueltig.map((u) => el('li', { klasse: 'nok', text: `Nicht übernommen (${u.feld}): ${u.fehler}` }))));
+  zeile('assistant', box);
+}
+
+function zeigeAntrag(antrag) {
+  const box = el('div', { klasse: 'kasten' }, el('strong', { text: 'Entwurf Antrag Einstiegserlaubnis' }));
+  const zeilen = [
+    ['Bezirk', antrag.bezirk], ['Auftrag', antrag.auftragsnummer], ['Ort', antrag.ort], ['Objekte', antrag.objekte.join('; ')],
+    ['Anlass', antrag.anlass], ['Personal', antrag.personal.join(', ')], ['Termin', antrag.termin]
+  ];
+  box.append(el('ul', {}, ...zeilen.map(([k, v]) => el('li', { text: `${k}: ${v || '–'}` }))));
+  if (antrag.offenePunkte.length) box.append(el('strong', { text: 'Offen' }), el('ul', {}, ...antrag.offenePunkte.map((p) => el('li', { klasse: 'befund-klaeren', text: p }))));
+  box.append(el('span', { klasse: 'hinweis', text: antrag.hinweis }));
+  zeile('assistant', box);
+}
+
 function zeigeWerkzeugErgebnis(werkzeug, ergebnis) {
-  if (werkzeug === 'auftrag_zusammenfassen') {
-    zeile('assistant', ergebnis.text);
-    zustand.verlauf.push({ rolle: 'assistant', text: ergebnis.text });
-  } else if (werkzeug === 'fehlende_angaben') {
-    const box = el('div', {}, el('strong', { text: ergebnis.regeln.length ? 'Prüfung der Angaben' : 'Alle Pflichtangaben sind vorhanden.' }));
-    const stufen = { fehlt: 'fehlt', klaeren: 'klären', empfohlen: 'empfohlen' };
-    if (ergebnis.regeln.length)
-      box.append(el('ul', {}, ...ergebnis.regeln.map((r) => el('li', { klasse: `befund-${r.stufe}`, text: `${stufen[r.stufe]}: ${r.text}` }))));
-    if (ergebnis.hinweise?.length)
-      box.append(el('strong', { text: 'Hinweise von KI31' }), el('ul', {}, ...ergebnis.hinweise.map((h) => el('li', { text: h }))));
-    zeile('assistant', box);
-    markiereFelder(ergebnis.regeln);
-    zustand.verlauf.push({ rolle: 'assistant', text: ergebnis.regeln.map((r) => r.text).concat(ergebnis.hinweise || []).join('\n') || 'Alle Pflichtangaben vorhanden.' });
-  } else if (werkzeug === 'meldeschein_entwerfen') {
+  if (ergebnis.aenderungen) {
+    zeigeAenderungen(ergebnis);
+    zustand.verlauf.push({ rolle: 'assistant', text: `Feldvorschläge: ${ergebnis.aenderungen.map((a) => `${a.titel}=${anzeigeWert(a.neu)}`).join(', ')}` });
+  } else if (ergebnis.antrag) {
+    zeigeAntrag(ergebnis.antrag);
+    zustand.verlauf.push({ rolle: 'assistant', text: 'Ich habe einen Antrag auf Einstiegserlaubnis vorbereitet.' });
+  } else if (ergebnis.meldeschein) {
+    beginneMessung('mit KI', zustand.anfrageStart);
     meldescheinZeigen(ergebnis.meldeschein, 'Entwurf von KI31');
     zeile('assistant', `Meldeschein-Entwurf an ${ergebnis.meldeschein.empfaenger || '(Empfänger offen)'} liegt unter dem Auftrag bereit. ${ergebnis.meldeschein.offenePunkte.length} offene Punkte.`);
     zustand.verlauf.push({ rolle: 'assistant', text: `Ich habe einen Meldeschein-Entwurf erstellt: ${JSON.stringify(ergebnis.meldeschein)}` });
+  } else if (ergebnis.regeln) {
+    const box = el('div', {}, el('strong', { text: ergebnis.regeln.length ? 'Prüfung der Angaben' : 'Keine Auffälligkeiten.' }));
+    const stufen = { fehlt: 'fehlt', klaeren: 'klären', empfohlen: 'empfohlen' };
+    if (ergebnis.regeln.length)
+      box.append(el('ul', {}, ...ergebnis.regeln.map((r) => el('li', { klasse: `befund-${r.stufe}`, text: `${stufen[r.stufe] || r.stufe}: ${r.text}` }))));
+    if (ergebnis.hinweise?.length)
+      box.append(el('strong', { text: 'Hinweise von KI31' }), el('ul', {}, ...ergebnis.hinweise.map((h) => el('li', { text: h }))));
+    zeile('assistant', box);
+    if (werkzeug === 'fehlende_angaben') markiereFelder(ergebnis.regeln);
+    zustand.verlauf.push({ rolle: 'assistant', text: ergebnis.regeln.map((r) => r.text).concat(ergebnis.hinweise || []).join('\n') || 'Keine Auffälligkeiten.' });
+  } else if (typeof ergebnis.text === 'string') {
+    zeile('assistant', ergebnis.text);
+    zustand.verlauf.push({ rolle: 'assistant', text: ergebnis.text });
   }
 }
 
 async function werkzeug(name) {
   const a = leseMaske();
-  if (name === 'meldeschein_entwerfen') beginneMessung('mit KI');
+  zustand.anfrageStart = Date.now();
   const knoepfe = document.querySelectorAll('.werkzeuge button');
   knoepfe.forEach((k) => (k.disabled = true));
   const warte = systemZeile('KI31 arbeitet …');
@@ -237,7 +302,6 @@ async function werkzeug(name) {
     zeigeWerkzeugErgebnis(name, antwort.ergebnis);
   } catch (f) {
     warte.textContent = f.message;
-    if (name === 'meldeschein_entwerfen') stoppeMessung();
   } finally {
     knoepfe.forEach((k) => (k.disabled = false));
   }
@@ -250,22 +314,19 @@ function zeigeAgent(kennung) {
 
 // ------------------------------------------------------------------ Chat
 
-$('#chat-form').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const text = $('#chat-text').value.trim();
-  if (!text) return;
-  $('#chat-text').value = '';
+async function anliegenSenden(text) {
+  zustand.anfrageStart = Date.now();
   zeile('user', text);
   zustand.verlauf.push({ rolle: 'user', text });
-  const knopf = ev.submitter || $('#chat-form button[type=submit]');
+  const knopf = $('#chat-form button[type=submit]');
   knopf.disabled = true;
   let antwortZeile = null;
   let antwortText = '';
   try {
-    const res = await fetch('/api/ki/chat', {
+    const res = await fetch('/api/ki31/anliegen', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-ki31-rolle': rolle() },
-      body: JSON.stringify({ auftrag: leseMaske(), verlauf: zustand.verlauf })
+      body: JSON.stringify({ anliegen: text, auftrag: leseMaske(), verlauf: zustand.verlauf })
     });
     const leser = res.body.getReader();
     const decoder = new TextDecoder();
@@ -279,13 +340,18 @@ $('#chat-form').addEventListener('submit', async (ev) => {
         const e = JSON.parse(puffer.slice(0, n));
         puffer = puffer.slice(n + 1);
         if (e.typ === 'agent') zeigeAgent(e.agent);
+        else if (e.typ === 'plan' && e.schritte.length)
+          zeile('system', `Plan: ${e.schritte.map((x, i) => `${i + 1}. ${x.titel} (${x.agent === 'KI31' ? 'KI31' : `Agent ${x.agent}`})`).join(' → ')}`);
         else if (e.typ === 'text') {
           antwortZeile ||= zeile('assistant', '');
           antwortText += e.text;
           antwortZeile.textContent = antwortText;
-        } else if (e.typ === 'werkzeug') {
-          if (e.werkzeug === 'meldeschein_entwerfen') beginneMessung('mit KI');
-          zeigeWerkzeugErgebnis(e.werkzeug, e.ergebnis);
+        } else if (e.typ === 'werkzeug') zeigeWerkzeugErgebnis(e.werkzeug, e.ergebnis);
+        else if (e.typ === 'luecke') zeigeLuecke(e);
+        else if (e.typ === 'naechster' && e.vorschlaege.length) {
+          const box = el('div', { klasse: 'naechste' });
+          for (const v of e.vorschlaege) box.append(el('button', { type: 'button', klasse: 'leise klein', text: v.text, onclick: () => anliegenSenden(v.anliegen) }));
+          zeile('system', box);
         } else if (e.typ === 'fehler') systemZeile(`Fehler: ${e.text}`);
       }
     }
@@ -294,7 +360,26 @@ $('#chat-form').addEventListener('submit', async (ev) => {
     systemZeile(`Fehler: ${f.message}`);
   } finally {
     knopf.disabled = false;
+    werkstattZaehler();
   }
+}
+
+function zeigeLuecke(e) {
+  const status = { vorschlag: 'Vorschlag', entwurf: 'Entwurf', geprueft: 'Entwurf getestet – wartet auf Freigabe durch 31C' };
+  const box = el('div', { klasse: 'kasten' },
+    el('strong', { text: `Agent ${e.agent} hat dafür noch kein Werkzeug.` }),
+    el('span', { text: `In der Werkstatt angelegt: „${e.eintrag.titel}“ – ${status[e.eintrag.status] || e.eintrag.status}.` }),
+    el('span', { klasse: 'hinweis', text: 'Nutzbar wird das Werkzeug erst, wenn 31C es freigibt.' }),
+    el('div', { klasse: 'knopfzeile' }, el('button', { type: 'button', klasse: 'leise klein', text: 'Werkstatt öffnen', onclick: werkstattOeffnen })));
+  zeile('assistant', box);
+}
+
+$('#chat-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const text = $('#chat-text').value.trim();
+  if (!text) return;
+  $('#chat-text').value = '';
+  anliegenSenden(text);
 });
 $('#chat-text').addEventListener('keydown', (ev) => {
   if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); $('#chat-form').requestSubmit(); }
@@ -410,9 +495,9 @@ $('#ohne-ki-start').addEventListener('click', () => {
   meldescheinZeigen({}, 'Ohne KI – manuell');
 });
 
-function beginneMessung(modus) {
+function beginneMessung(modus, start = Date.now()) {
   if (zustand.messung) return;
-  zustand.messung = { modus, start: Date.now(), entwurfZeit: null, entwurf: null };
+  zustand.messung = { modus, start: start || Date.now(), entwurfZeit: null, entwurf: null };
   clearInterval(zustand.uhr);
   zustand.uhr = setInterval(() => {
     $('#stoppuhr').textContent = `⏱ ${formatDauer(Math.round((Date.now() - zustand.messung.start) / 1000))} (${modus})`;
@@ -450,6 +535,7 @@ function rolleAnwenden() {
   document.querySelector('[data-werkzeug="meldeschein_entwerfen"]').hidden = !fk;
   $('.messmodus').hidden = !fk;
   if (!fk) meldescheinSchliessen();
+  werkstattZaehler();
 }
 $('#rolle').addEventListener('change', rolleAnwenden);
 
@@ -459,5 +545,105 @@ $('#zuruecksetzen').addEventListener('click', async () => {
   zustand.aktiv = null;
   await ladeAuftraege();
 });
+
+// ------------------------------------------------------------------ Werkstatt
+
+const WS_STATUS = { vorschlag: 'Vorschlag', entwurf: 'Entwurf', geprueft: 'getestet', freigegeben: 'freigegeben', widerrufen: 'widerrufen', verworfen: 'verworfen' };
+
+async function werkstattZaehler() {
+  try {
+    const d = await api('/api/werkstatt');
+    const offen = d.eintraege.filter((e) => ['vorschlag', 'entwurf', 'geprueft'].includes(e.status)).length;
+    $('#werkstatt-zaehler').hidden = offen === 0;
+    $('#werkstatt-zaehler').textContent = String(offen);
+  } catch {}
+}
+
+async function werkstattOeffnen() {
+  await werkstattZeigen();
+  if (!$('#werkstatt').open) $('#werkstatt').showModal();
+}
+$('#werkstatt-oeffnen').addEventListener('click', werkstattOeffnen);
+
+async function werkstattAktion(id, aktion, daten = {}) {
+  const res = await fetch(`/api/werkstatt/${id}/${aktion}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-ki31-rolle': rolle() },
+    body: JSON.stringify(daten)
+  });
+  const inhalt = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(inhalt.fehler || `Fehler ${res.status}`), { details: inhalt.details });
+  return inhalt;
+}
+
+async function werkstattZeigen() {
+  const d = await api('/api/werkstatt');
+  const ziel = $('#werkstatt-inhalt');
+  if (!d.darfBearbeiten) ziel.replaceChildren(el('p', { klasse: 'hinweis', text: 'Ansicht nur lesend. Bearbeiten und Freigeben: Ansicht „31C – IT“ wählen.' }));
+  else ziel.replaceChildren();
+  if (d.eintraege.length === 0) {
+    ziel.append(el('p', { text: 'Noch keine Einträge. Gib KI31 eine Aufgabe, für die es noch kein Werkzeug gibt, z. B. „Erstelle eine Materialliste für die Baustelle“.' }));
+    return;
+  }
+  for (const e of d.eintraege) {
+    const meldung = el('p', { klasse: 'meldung', role: 'status' });
+    const tue = async (aktion, daten) => {
+      meldung.textContent = 'Bitte warten …';
+      try {
+        await werkstattAktion(e.id, aktion, daten);
+        await werkstattZeigen();
+        werkstattZaehler();
+      } catch (f) {
+        meldung.replaceChildren(el('span', { klasse: 'nok', text: f.message }), ...(f.details || []).map((x) => el('div', { klasse: 'nok', text: `• ${x}` })));
+      }
+    };
+    const block = el('section', { klasse: 'ws-eintrag' },
+      el('div', { klasse: 'ws-kopf' },
+        el('strong', { text: e.spec?.titel || e.anliegen }),
+        el('span', { klasse: `abzeichen st-${e.status}`, text: `${WS_STATUS[e.status] || e.status}${e.version ? ` · v${e.version}` : ''}` })),
+      el('span', { klasse: 'hinweis', text: `Agent ${e.agent} · Anliegen: „${e.anliegen}“${e.spec ? ` · Art: ${d.arten[e.spec.art] || e.spec.art}` : ''}` }));
+    if (e.freigabe) block.append(el('span', { klasse: 'hinweis', text: `Freigegeben für: ${e.freigabe.rollen.map((r) => zustand.status.rollen[r] || r).join(', ')} durch ${e.freigabe.durch}` }));
+
+    if (e.testergebnis) {
+      block.append(el('strong', { klasse: e.testergebnis.bestanden ? 'ok' : 'nok', text: e.testergebnis.bestanden ? 'Tests bestanden' : 'Tests nicht bestanden' }),
+        el('ul', {}, ...e.testergebnis.faelle.map((f) => el('li', { klasse: f.ok ? 'ok' : 'nok', text: `Test ${f.nr} (${f.auftragId}): ${f.meldungen.join(' ')}` }))));
+      const beispiel = e.testergebnis.faelle.find((f) => f.ergebnis)?.ergebnis;
+      if (beispiel?.text) block.append(el('details', {}, el('summary', { text: 'Beispielergebnis ansehen' }), el('pre', { text: beispiel.text })));
+    }
+
+    const editor = el('textarea', { rows: 12 });
+    editor.value = e.spec ? JSON.stringify(e.spec, null, 2) : '';
+    editor.readOnly = !d.darfBearbeiten || e.status === 'freigegeben';
+    if (e.spec) block.append(el('details', d.darfBearbeiten && e.status !== 'freigegeben' ? { open: '' } : {}, el('summary', { text: 'Beschreibung des Werkzeugs (JSON)' }), editor));
+
+    if (d.darfBearbeiten) {
+      const knoepfe = el('div', { klasse: 'knopfzeile' });
+      const knopf = (text, fn, leise = true) => knoepfe.append(el('button', { type: 'button', klasse: leise ? 'leise klein' : 'klein', text, onclick: fn }));
+      if (['vorschlag', 'entwurf', 'geprueft'].includes(e.status)) {
+        knopf(e.spec ? 'Agent soll neu entwerfen' : 'Agent soll Entwurf bauen', () => tue('ki-entwurf'));
+        if (e.spec) {
+          knopf('Änderungen speichern', () => {
+            let spec;
+            try { spec = JSON.parse(editor.value); } catch { meldung.textContent = 'Kein gültiges JSON.'; return; }
+            tue('entwurf', { spec });
+          });
+          knopf('Testen', () => tue('testen'));
+        }
+        knopf('Verwerfen', () => tue('verwerfen'));
+      }
+      if (e.status === 'geprueft' && d.darfFreigeben) {
+        const fk = el('input', { type: 'checkbox' }); fk.checked = true;
+        const ma = el('input', { type: 'checkbox' });
+        knoepfe.append(el('label', { klasse: 'haken' }, fk, document.createTextNode('Führungskraft')), el('label', { klasse: 'haken' }, ma, document.createTextNode('Mitarbeitende')));
+        knopf('Freigeben', () => tue('freigeben', { rollen: [fk.checked && 'fuehrungskraft', ma.checked && 'mitarbeitende'].filter(Boolean) }), false);
+      }
+      if (e.status === 'freigegeben' && d.darfFreigeben) knopf('Freigabe widerrufen', () => tue('widerrufen'));
+      if (['widerrufen', 'verworfen'].includes(e.status)) knopf('Wieder aufnehmen', () => tue('aufnehmen'));
+      block.append(knoepfe);
+    }
+    block.append(el('details', {}, el('summary', { text: 'Verlauf' }), el('ul', {}, ...e.verlauf.map((v) => el('li', { text: `${v.zeit.slice(0, 16).replace('T', ' ')} – ${v.rolle}: ${v.aktion}` })))), meldung);
+    ziel.append(block);
+  }
+}
 
 start().catch((f) => systemZeile(`Start fehlgeschlagen: ${f.message}`));

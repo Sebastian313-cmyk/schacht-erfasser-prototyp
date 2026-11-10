@@ -11,20 +11,48 @@ mit KI schneller geht – einschließlich der Zeit für die Kontrolle.
 
 Architektur, Ausbaustufen und offene Fragen: [docs/KONZEPT.md](docs/KONZEPT.md).
 
+## Aufbau: KI31 ist das Gehirn
+
+```
+Anliegen („DN ist 300, Bezirk Ost, Einstiegserlaubnis brauchen wir“)
+   │
+KI31 – Gehirn: verstehen → planen → an Agenten verteilen → nächsten Schritt vorschlagen
+   │
+   ├── Agent 311 Zentrale Aufgaben      → z. B. Einstiegserlaubnis vorbereiten
+   ├── Agent 312 Netzwartung/-inspektion → z. B. Reinigung oder Inspektion anfragen
+   └── Agent 313 Netzinstandsetzung      → z. B. Meldeschein entwerfen
+   │
+   kein Werkzeug passt? → Werkstatt: Vorschlag → Entwurf → Test → Freigabe durch 31C
+```
+
+Das Sprachmodell ist nur das „Sprachzentrum“ von KI31. Ohne Modell versteht KI31 feste
+Formulierungen über Regeln (Demo-Modus). Rechte, Prüfregeln und Freigaben liegen immer im Server.
+
 ## Was der Pilot kann
 
 | Funktion | So funktioniert sie |
 |---|---|
-| Auftragsmaske | BU-M-Auftrag mit Objekten (Objektart, Objekt-ID, DN, Befund, Arbeit), Personal, Wetter, Medien, Einstiegserlaubnis |
-| Fehlende Angaben | Feste Prüfregeln (ohne KI, nachvollziehbar) markieren Pflichtfelder rot und Klärungsbedarf orange. Das Modell ergänzt höchstens drei inhaltliche Hinweise. |
-| Zusammenfassen | Kurzüberblick über Ort, Objekte, Schaden, Arbeit und Stand |
-| Meldeschein entwerfen | KI31 füllt Empfänger, angeforderte Leistung, Begründung, Dringlichkeit, Ort, Objektbezug, Hinweise und offene Punkte. Empfänger nur aus der Organisationsliste. Offene Pflichtangaben landen immer in „Offene Punkte“. |
-| Prüfen und übernehmen | Der Entwurf ist frei änderbar. Erst „Übernehmen“ speichert ihn. Die Weitergabe selbst entscheidet die zuständige Person. |
-| Chat | Fragen zum geöffneten Auftrag, auch mit ungespeicherten Änderungen. Bitten wie „Entwirf einen Meldeschein“ lösen das passende Werkzeug aus. |
-| Fachagenten | KI31 ordnet eine Anfrage 311, 312 oder 313 zu. Im Pilot geschieht das regelbasiert und wird angezeigt. |
-| 31C-Rechte | Ansicht „Mitarbeitende“ darf zusammenfassen und prüfen, aber keinen Meldeschein entwerfen oder übernehmen. Die Prüfung erfolgt auf dem Server. |
-| Messung | Durchläufe „mit KI“ und „ohne KI“ werden gestoppt. Die Auswertung zeigt Median der Gesamtdauer, Kontrollzeit, geänderte Felder und unbrauchbare Entwürfe. |
-| Demo-Modus | Ohne Modell laufen Vorlagen statt KI. Damit lassen sich Oberfläche und Ablauf sofort testen. |
+| Anliegen | Sprechen oder schreiben. KI31 plant die Arbeitsschritte, zeigt den Plan und gibt jeden Schritt an den zuständigen Agenten. |
+| Felder ausfüllen | KI31 trägt Angaben ein, z. B. DN, Objekt-ID, Bezirk, Einstiegserlaubnis, Termin, Wetter, Temperatur, Personal. Die Änderungen erscheinen als Vorschlag mit alt → neu. Erst „Bestätigen“ übernimmt sie. Nur freigegebene Felder, alle Werte werden geprüft. |
+| Nächster Schritt | Nach jedem Anliegen schlägt KI31 vor, was als Nächstes sinnvoll ist, z. B. offene Pflichtangaben, Einstiegserlaubnis oder Meldeschein. |
+| Agent 311 | Einstiegserlaubnis-Antrag vorbereiten, mit offenen Punkten. Die Entscheidung trifft die zuständige Person. |
+| Agent 312 | Reinigung oder TV-Inspektion als Meldeschein-Entwurf anfragen |
+| Agent 313 | Meldeschein entwerfen. Empfänger nur aus der Organisationsliste, offene Pflichtpunkte immer unter „Offene Punkte“. |
+| Werkstatt | Findet KI31 kein Werkzeug, legt der zuständige Agent einen Vorschlag an, baut einen Entwurf und testet ihn mit den fiktiven Testaufträgen. 31C prüft, ändert und gibt für bestimmte Rollen frei oder widerruft. |
+| Sichere Bausteine | Werkstatt-Werkzeuge sind kein Programmcode, sondern Beschreibungen aus drei Bausteinen: Textvorlage, Prüfregeln, Feldänderungen (immer als Vorschlag). |
+| Fehlende Angaben | Feste Prüfregeln ohne KI markieren Pflichtfelder rot und Klärungsbedarf orange. |
+| 31C-Rechte | Drei Testrollen: Führungskraft, Mitarbeitende, 31C – IT. Der Server prüft jedes Werkzeug. |
+| Messung | Durchläufe „mit KI“ und „ohne KI“ bis zum übernommenen Meldeschein, inklusive Kontrollzeit |
+| Demo-Modus | Ohne Modell versteht KI31 feste Formulierungen und baut Grundentwürfe in der Werkstatt. |
+
+### Ausprobieren (auch im Demo-Modus)
+
+1. Auftrag „…0143“ öffnen und schreiben: *DN ist 300, Bezirk Ost, Einstiegserlaubnis brauchen wir. Termin am 20.11.2026*
+   → Vorschlag bestätigen → KI31 schlägt „Antrag Einstiegserlaubnis vorbereiten“ vor.
+2. Schreiben: *Erstelle eine Materialliste für die Baustelle* → Agent 313 hat kein Werkzeug →
+   Eintrag in der Werkstatt mit getestetem Entwurf.
+3. Ansicht „31C – IT“ → Werkstatt → Entwurf ansehen, ändern, testen, freigeben.
+4. Zurück zu „Führungskraft“ → *Materialliste bitte* → KI31 nutzt das neue Werkzeug.
 
 ## Installation (Windows, macOS oder Linux)
 
@@ -79,17 +107,22 @@ npm test
 ```
 
 Die Tests simulieren einen Ollama-Server und prüfen Prüfregeln, Agentenwahl,
-Meldeschein-Bereinigung, 31C-Rechte, Chat-Streaming und Auswertung.
+Meldeschein-Bereinigung, 31C-Rechte, Gehirn-Ablauf, Werkstatt-Lebenszyklus und Auswertung.
 
 ## Projektaufbau
 
 ```
 server/
   server.js         HTTP-Server und Schnittstellen
-  ki.js             KI-Funktionen und Systemtexte, Demo-Vorlagen
+  gehirn.js         KI31: verstehen, planen, verteilen, Lücken an die Werkstatt
+  verstehen.js      Verstehen ohne Modell (feste Formulierungen)
+  werkzeuge.js      Werkzeuge der Agenten (eingebaut + freigegebene Werkstatt-Werkzeuge)
+  werkstatt.js      Werkstatt: Vorschlag, Entwurf, Prüfung, Test, Freigabe, Widerruf
+  felder.js         Felder, die KI31 ändern darf, mit Wertprüfung
+  ki.js             Funktionen mit Sprachmodell und Demo-Vorlagen
   ollama.js         Anbindung an das lokale Modell
   regeln.js         feste Prüfregeln für Pflichtangaben
-  agenten.js        Fachagenten 311/312/313, Zuordnung, Werkzeugerkennung
+  agenten.js        Fachagenten 311/312/313
   berechtigungen.js 31C: welche Rolle welches Werkzeug nutzen darf
   organisation.js   Empfängerliste, Objektarten, Dringlichkeiten
   speicher.js       Dateiablage in data/laufzeit

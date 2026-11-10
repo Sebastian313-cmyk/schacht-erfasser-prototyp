@@ -1,8 +1,21 @@
 # KI31 – Konzept und Ausbaustufen
 
-Stand: 9. November 2026 · Pilot 0.1
+Stand: 10. November 2026 · Pilot 0.2
 
 ## Leitidee
+
+**KI31 ist das Gehirn**, kein Chatprogramm. Das Sprachmodell ist darin nur das Sprachzentrum.
+
+| Teil | In KI31 |
+|---|---|
+| Wahrnehmen | Auftrag, Eingaben, später Fotos, Standort, Wetter |
+| Verstehen | lokales Sprachmodell oder feste Regeln → Arbeitsschritte |
+| Wissen | Prüfregeln, Abläufe, Organisation 311/312/313 |
+| Entscheiden | Plan, Zuordnung jedes Schritts zum Agenten, dem das Werkzeug gehört |
+| Handeln | Werkzeuge: Felder ausfüllen, Anträge und Meldescheine vorbereiten |
+| Gedächtnis | Protokoll aller Schritte |
+| Gewissen (31C) | Rechte je Rolle und Werkzeug, Freigaben |
+| Wachsen | Werkstatt |
 
 KI31 ist der Assistent des Kanalbetriebs 31. Man spricht oder schreibt mit ihm, während man einen
 Auftrag bearbeitet. KI31 versteht den Zusammenhang, erkennt fehlende Angaben und bereitet den
@@ -78,6 +91,12 @@ vertretbarer Hardware die besten Entwürfe liefert.
 - 31C mit echten Personen-, Abteilungs- und Ordnerrechten (setzt Anmeldung auf dem Server voraus)
 
 ### Stufe 4 – Werkzeugwerkstatt (Selbsterweiterung unter Kontrolle)
+
+**Erster Stand umgesetzt (Pilot 0.2):** Findet KI31 kein Werkzeug, legt der zuständige Agent einen
+Vorschlag an, baut einen Entwurf, testet ihn mit den fiktiven Testaufträgen, und 31C gibt ihn für
+bestimmte Rollen frei oder widerruft ihn. Werkzeuge bestehen aus sicheren Bausteinen
+(Textvorlage, Prüfregeln, Feldänderungen) – nicht aus Programmcode. Weitere Bausteine, z. B.
+Berechnungen oder Tabellen, kommen dazu, wenn die Agenten sie brauchen.
 
 Idee: KI31 bemerkt, dass bei einem wiederkehrenden Arbeitsschritt ein Werkzeug fehlt, schlägt eine
 Lösung vor, baut in einer getrennten Werkstatt einen Entwurf und prüft ihn mit Testdaten. 31C

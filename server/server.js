@@ -6,12 +6,16 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { AGENTEN, erkenneWerkzeug, waehleAgent } from './agenten.js';
+import { AGENTEN } from './agenten.js';
 import { darfWerkzeug, ROLLEN } from './berechtigungen.js';
+import { FELDER } from './felder.js';
+import { bearbeiteAnliegen, werkstattEntwurfBauen } from './gehirn.js';
 import * as ki from './ki.js';
 import { DRINGLICHKEITEN, EMPFAENGER, OBJEKTARTEN } from './organisation.js';
 import * as speicher from './speicher.js';
 import { auswerten } from './auswertung.js';
+import * as werkstatt from './werkstatt.js';
+import { verfuegbar } from './werkzeuge.js';
 
 const OEFFENTLICH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const PORT = Number(process.env.PORT || 3131);
@@ -36,19 +40,6 @@ async function koerper(req) {
 
 const rolleAus = (req) => (ROLLEN[req.headers['x-ki31-rolle']] ? req.headers['x-ki31-rolle'] : 'mitarbeitende');
 
-async function werkzeugAusfuehren(werkzeug, { auftrag, agent, modus, wunsch }) {
-  switch (werkzeug) {
-    case 'auftrag_zusammenfassen':
-      return { text: await ki.zusammenfassen(auftrag, { modus, agent }) };
-    case 'fehlende_angaben':
-      return ki.fehlendeAngaben(auftrag, { modus, agent });
-    case 'meldeschein_entwerfen':
-      return { meldeschein: await ki.meldescheinEntwerfen(auftrag, { modus, agent, wunsch }) };
-    default:
-      throw new Error(`Unbekanntes Werkzeug: ${werkzeug}`);
-  }
-}
-
 export async function bearbeite(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const rolle = rolleAus(req);
@@ -61,7 +52,8 @@ export async function bearbeite(req, res) {
         agenten: Object.fromEntries(Object.entries(AGENTEN).map(([k, a]) => [k, a.name])),
         empfaenger: EMPFAENGER,
         objektarten: OBJEKTARTEN,
-        dringlichkeiten: DRINGLICHKEITEN
+        dringlichkeiten: DRINGLICHKEITEN,
+        werkzeuge: (await verfuegbar()).map((w) => ({ name: w.name, titel: w.titel, agent: w.agent, quelle: w.quelle, erlaubt: darfWerkzeug(rolle, w.name, w) }))
       });
     }
 
@@ -79,46 +71,69 @@ export async function bearbeite(req, res) {
     }
 
     if (url.pathname === '/api/ki/werkzeug' && req.method === 'POST') {
-      const { werkzeug, auftrag, wunsch } = await koerper(req);
-      if (!darfWerkzeug(rolle, werkzeug)) {
+      const { werkzeug, auftrag, parameter = {} } = await koerper(req);
+      const w = (await verfuegbar()).find((x) => x.name === werkzeug);
+      if (!w) return json(res, 404, { fehler: `Unbekanntes Werkzeug: ${werkzeug}` });
+      if (!darfWerkzeug(rolle, w.name, w)) {
         await speicher.protokolliere({ art: 'verweigert', rolle, werkzeug });
-        return json(res, 403, { fehler: `Die Rolle „${ROLLEN[rolle].bezeichnung}“ darf „${werkzeug}“ nicht nutzen (31C).` });
+        return json(res, 403, { fehler: `Die Rolle „${ROLLEN[rolle].bezeichnung}“ darf „${w.titel}“ nicht nutzen (31C).` });
       }
       const { modus } = await ki.betriebsart();
-      const agent = waehleAgent(wunsch || '', auftrag);
-      const ergebnis = await werkzeugAusfuehren(werkzeug, { auftrag, agent, modus, wunsch });
-      await speicher.protokolliere({ art: 'werkzeug', rolle, werkzeug, agent, modus, auftrag: auftrag?.auftragsnummer });
-      return json(res, 200, { werkzeug, agent, modus, ergebnis });
+      const ergebnis = await w.ausfuehren({ auftrag, parameter, modus, agent: w.agent });
+      await speicher.protokolliere({ art: 'werkzeug', rolle, werkzeug, agent: w.agent, modus, auftrag: auftrag?.auftragsnummer });
+      return json(res, 200, { werkzeug, agent: w.agent, modus, ergebnis });
     }
 
-    if (url.pathname === '/api/ki/chat' && req.method === 'POST') {
-      const { auftrag, verlauf = [] } = await koerper(req);
-      const letzte = [...verlauf].reverse().find((n) => n.rolle === 'user')?.text || '';
-      const agent = waehleAgent(letzte, auftrag);
-      const { modus } = await ki.betriebsart();
+    if (url.pathname === '/api/ki31/anliegen' && req.method === 'POST') {
+      const { anliegen = '', auftrag = {}, verlauf = [] } = await koerper(req);
       res.writeHead(200, { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-cache' });
       const senden = (e) => res.write(JSON.stringify(e) + '\n');
-      senden({ typ: 'agent', agent, name: AGENTEN[agent].name, modus });
-
       try {
-        const werkzeug = erkenneWerkzeug(letzte);
-        if (werkzeug) {
-          if (!darfWerkzeug(rolle, werkzeug)) {
-            senden({ typ: 'text', text: `Das Werkzeug „${werkzeug}“ ist für die Rolle „${ROLLEN[rolle].bezeichnung}“ nicht freigegeben (31C).` });
-          } else {
-            const ergebnis = await werkzeugAusfuehren(werkzeug, { auftrag, agent, modus, wunsch: letzte });
-            senden({ typ: 'werkzeug', werkzeug, ergebnis });
-          }
-          await speicher.protokolliere({ art: 'chat-werkzeug', rolle, werkzeug, agent, modus });
-        } else {
-          await ki.chatAntwort({ auftrag, verlauf, agent, modus, beiText: (text) => senden({ typ: 'text', text }) });
-          await speicher.protokolliere({ art: 'chat', rolle, agent, modus });
-        }
+        await bearbeiteAnliegen({ anliegen: String(anliegen).slice(0, 4000), auftrag, verlauf, rolle, senden });
       } catch (fehler) {
         senden({ typ: 'fehler', text: String(fehler.message || fehler) });
       }
       senden({ typ: 'ende' });
       return res.end();
+    }
+
+    if (url.pathname === '/api/werkstatt' && req.method === 'GET') {
+      return json(res, 200, {
+        eintraege: (await werkstatt.lade()).reverse(),
+        arten: werkstatt.ARTEN,
+        bedingungen: werkstatt.BEDINGUNGEN,
+        felder: Object.keys(FELDER),
+        darfBearbeiten: darfWerkzeug(rolle, 'werkstatt_bearbeiten'),
+        darfFreigeben: darfWerkzeug(rolle, 'werkstatt_freigeben')
+      });
+    }
+
+    const ws = url.pathname.match(/^\/api\/werkstatt\/([\w-]+)\/(entwurf|ki-entwurf|testen|freigeben|widerrufen|verwerfen|aufnehmen)$/);
+    if (ws && req.method === 'POST') {
+      const [, id, aktion] = ws;
+      const recht = ['freigeben', 'widerrufen'].includes(aktion) ? 'werkstatt_freigeben' : 'werkstatt_bearbeiten';
+      if (!darfWerkzeug(rolle, recht)) return json(res, 403, { fehler: 'Nur 31C darf die Werkstatt bearbeiten und Werkzeuge freigeben.' });
+      const daten = await koerper(req);
+      const wer = ROLLEN[rolle].bezeichnung;
+      try {
+        let e;
+        if (aktion === 'entwurf') e = await werkstatt.entwurfSpeichern(id, daten.spec, wer);
+        if (aktion === 'ki-entwurf') {
+          const eintrag = (await werkstatt.lade()).find((x) => x.id === id);
+          if (!eintrag) return json(res, 404, { fehler: 'nicht gefunden' });
+          e = (await werkstattEntwurfBauen(eintrag, (await ki.betriebsart()).modus)) || eintrag;
+        }
+        if (aktion === 'testen') e = await werkstatt.testen(id, wer);
+        if (aktion === 'freigeben') e = await werkstatt.freigeben(id, { rollen: daten.rollen, rolle: wer });
+        if (aktion === 'widerrufen') e = await werkstatt.widerrufen(id, wer);
+        if (aktion === 'verwerfen') e = await werkstatt.verwerfen(id, wer);
+        if (aktion === 'aufnehmen') e = await werkstatt.wiederAufnehmen(id, wer);
+        await speicher.protokolliere({ art: 'werkstatt', aktion, rolle, id });
+        return json(res, 200, e);
+      } catch (f) {
+        if (f instanceof werkstatt.WerkstattFehler) return json(res, f.status, { fehler: f.message, details: f.details });
+        throw f;
+      }
     }
 
     if (url.pathname === '/api/meldescheine' && req.method === 'POST') {

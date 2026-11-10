@@ -52,7 +52,18 @@ async function lesenZeilen(name) {
     .map((z) => JSON.parse(z));
 }
 
-export const speichereMeldeschein = (m) => anhaengen('meldescheine.jsonl', m);
+export async function ladeJson(name) {
+  await vorbereiten();
+  if (!existsSync(datei(name))) return null;
+  return JSON.parse(await readFile(datei(name), 'utf8'));
+}
+
+export async function speichereJson(name, daten) {
+  await vorbereiten();
+  await writeFile(datei(name), JSON.stringify(daten, null, 2));
+}
+
+export const speichereMeldeschein =(m) => anhaengen('meldescheine.jsonl', m);
 export const ladeMeldescheine = () => lesenZeilen('meldescheine.jsonl');
 export const speichereMessung = (m) => anhaengen('messung.jsonl', m);
 export const ladeMessungen = () => lesenZeilen('messung.jsonl');

@@ -15,8 +15,10 @@
         <select id="rolle">
           <option value="fuehrungskraft">Führungskraft</option>
           <option value="mitarbeitende">Mitarbeitende</option>
+          <option value="it31c">31C – IT</option>
         </select>
       </label>
+      <button id="werkstatt-oeffnen" class="leise">Werkstatt <span id="werkstatt-zaehler" class="zaehler" hidden></span></button>
       <button id="auswertung-oeffnen" class="leise">Auswertung</button>
     </div>
   </header>
@@ -116,7 +118,7 @@
       </div>
       <ol id="verlauf" class="verlauf" aria-live="polite"></ol>
       <form id="chat-form" class="chat-eingabe">
-        <textarea id="chat-text" rows="2" placeholder="Frage an KI31 – z. B. „Entwirf einen Meldeschein“"></textarea>
+        <textarea id="chat-text" rows="2" placeholder="Anliegen an KI31 – z. B. „DN ist 300, Bezirk Ost, Einstiegserlaubnis brauchen wir“"></textarea>
         <div class="chat-knoepfe">
           <button type="button" id="diktat" class="leise" title="Spracheingabe">🎤</button>
           <button type="submit">Senden</button>
@@ -130,6 +132,15 @@
     <h2>Auswertung: Auftrag → übernommener Meldeschein</h2>
     <div id="auswertung-inhalt"></div>
     <form method="dialog"><button>Schließen</button></form>
+  </dialog>
+
+  <dialog id="werkstatt" class="werkstatt-dialog">
+    <div class="zeile-titel">
+      <h2>Werkstatt – neue Werkzeuge der Fachagenten</h2>
+      <form method="dialog"><button class="leise">Schließen</button></form>
+    </div>
+    <p class="hinweis">Kommt ein Agent nicht weiter, legt er hier einen Vorschlag an, baut einen Entwurf aus sicheren Bausteinen und testet ihn mit fiktiven Testaufträgen. Nutzbar wird ein Werkzeug erst nach Freigabe durch 31C.</p>
+    <div id="werkstatt-inhalt"></div>
   </dialog>
 
   <script type="module" src="app.js"></script>
