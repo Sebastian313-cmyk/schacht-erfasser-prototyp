@@ -5,7 +5,10 @@
 Arbeitsplattform des Kanalbetriebs 31 und der KI-Assistent **KI31**.
 - `server/`, `public/`, `test/`, `data/`: KI31-Pilot (Node.js, ohne npm-Abhängigkeiten)
 - `docs/KONZEPT.md`: Architektur und Ausbaustufen von KI31 – vor größeren Änderungen lesen
-- `arbeitsplattform/`: Quellcode der bestehenden Webanwendung (folgt)
+- `arbeitsplattform/`: Quellcode der bestehenden Webanwendung (folgt, Ordner „Kanalbetrieb“)
+- Branch `import/erfasser-app`: Erfasser-App (Flutter) – Vorbild für Formulare,
+  vorgefertigte Vorlagen in `assets/App/Formulare/`
+- Arbeitsordner des Nutzers am PC: `C:\Users\sgbgr\Desktop\KI31` (nur per Remote Control erreichbar)
 
 ## Schreibtisch – wo Claude arbeiten darf
 
@@ -28,6 +31,8 @@ Arbeitsplattform des Kanalbetriebs 31 und der KI-Assistent **KI31**.
   Freigabe neuer Werkzeuge.
 - Feste Prüfregeln vor KI. Das Modell darf Pflichtprüfungen nicht ersetzen.
 - KI-Ausgaben in festen Schemata. Werte außerhalb erlaubter Listen werden verworfen.
+- Formulare wie in der Erfasser-App: vorgefertigte Vorlagen mit nummerierten Feldern. KI31 füllt
+  nur aus (Feldplan je Formular), markiert Fehlendes statt zu erfinden, ein Mensch prüft vor dem Download.
 - Agenten erweitern sich nie selbst: Werkstatt nur mit Genehmigung von KI31, Nutzung nur nach Freigabe durch 31C.
 - Erster Maßstab: schneller zu einem brauchbaren Meldeschein, einschließlich Kontrollzeit.
 
