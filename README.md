@@ -22,7 +22,7 @@ KI31 – Gehirn: verstehen → planen → an Agenten verteilen → nächsten Sch
    ├── Agent 312 Netzwartung/-inspektion → z. B. Reinigung oder Inspektion anfragen
    └── Agent 313 Netzinstandsetzung      → z. B. Meldeschein entwerfen
    │
-   kein Werkzeug passt? → Werkstatt: Vorschlag → Entwurf → Test → Freigabe durch 31C
+   kein Werkzeug passt? → Agent fragt KI31 → KI31 entscheidet → Werkstatt: Entwurf → Test → Freigabe durch 31C
 ```
 
 Das Sprachmodell ist nur das „Sprachzentrum“ von KI31. Ohne Modell versteht KI31 feste
@@ -38,7 +38,9 @@ Formulierungen über Regeln (Demo-Modus). Rechte, Prüfregeln und Freigaben lieg
 | Agent 311 | Einstiegserlaubnis-Antrag vorbereiten, mit offenen Punkten. Die Entscheidung trifft die zuständige Person. |
 | Agent 312 | Reinigung oder TV-Inspektion als Meldeschein-Entwurf anfragen |
 | Agent 313 | Meldeschein entwerfen. Empfänger nur aus der Organisationsliste, offene Pflichtpunkte immer unter „Offene Punkte“. |
-| Werkstatt | Findet KI31 kein Werkzeug, legt der zuständige Agent einen Vorschlag an, baut einen Entwurf und testet ihn mit den fiktiven Testaufträgen. 31C prüft, ändert und gibt für bestimmte Rollen frei oder widerruft. |
+| Werkstatt nur über KI31 | Kommt ein Agent nicht weiter, darf er sich nicht selbst erweitern. Er fragt KI31. Das Gehirn lehnt ab (Grenze berührt), leitet auf ein vorhandenes Werkzeug um, führt mit einem laufenden Auftrag zusammen, stellt zurück (höchstens 3 offene Aufträge je Agent) oder genehmigt. Die Werkstatt nimmt technisch nur Aufträge mit Genehmigung von KI31 an. |
+| Werkstatt | Mit Genehmigung baut der Agent einen Entwurf und testet ihn mit den fiktiven Testaufträgen. 31C prüft, ändert und gibt für bestimmte Rollen frei oder widerruft. |
+| Grenzen von KI31 | Nie genehmigt werden Werkzeuge für Rechte und Freigaben, Entscheidungen über Einstiegserlaubnisse, Löschen, Bewertung oder Überwachung von Beschäftigten, Versand nach außen und Zugangsdaten. |
 | Sichere Bausteine | Werkstatt-Werkzeuge sind kein Programmcode, sondern Beschreibungen aus drei Bausteinen: Textvorlage, Prüfregeln, Feldänderungen (immer als Vorschlag). |
 | Fehlende Angaben | Feste Prüfregeln ohne KI markieren Pflichtfelder rot und Klärungsbedarf orange. |
 | 31C-Rechte | Drei Testrollen: Führungskraft, Mitarbeitende, 31C – IT. Der Server prüft jedes Werkzeug. |
@@ -49,8 +51,9 @@ Formulierungen über Regeln (Demo-Modus). Rechte, Prüfregeln und Freigaben lieg
 
 1. Auftrag „…0143“ öffnen und schreiben: *DN ist 300, Bezirk Ost, Einstiegserlaubnis brauchen wir. Termin am 20.11.2026*
    → Vorschlag bestätigen → KI31 schlägt „Antrag Einstiegserlaubnis vorbereiten“ vor.
-2. Schreiben: *Erstelle eine Materialliste für die Baustelle* → Agent 313 hat kein Werkzeug →
-   Eintrag in der Werkstatt mit getestetem Entwurf.
+2. Schreiben: *Erstelle eine Materialliste für die Baustelle* → Agent 313 hat kein Werkzeug, fragt
+   KI31 → genehmigt → Werkstatt-Auftrag mit getestetem Entwurf.
+   Gegenprobe: *Erstelle eine Liste, die Mitarbeitende nach Leistung bewertet* → KI31 lehnt ab.
 3. Ansicht „31C – IT“ → Werkstatt → Entwurf ansehen, ändern, testen, freigeben.
 4. Zurück zu „Führungskraft“ → *Materialliste bitte* → KI31 nutzt das neue Werkzeug.
 

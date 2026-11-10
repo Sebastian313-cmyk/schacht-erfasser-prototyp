@@ -184,7 +184,7 @@ test('Gehirn: reine Frage wird beantwortet, 31C sperrt Werkzeuge für Mitarbeite
   assert.ok(e2.some((x) => x.typ === 'text' && /nicht freigegeben \(31C\)/.test(x.text)));
 });
 
-test('Werkstatt: Lücke → Entwurf → Test → Freigabe durch 31C → Nutzung → Widerruf', async () => {
+test('Werkstatt: Agent fragt KI31 → genehmigt → Entwurf → Test → Freigabe durch 31C → Nutzung → Widerruf', async () => {
   const [auftrag] = await beispiele();
   ollamaPlan = { schritte: [], luecke: 'Materialliste für die Baustelle erstellen', antwort: '' };
   ollamaWerkzeug = {
@@ -198,8 +198,9 @@ test('Werkstatt: Lücke → Entwurf → Test → Freigabe durch 31C → Nutzung 
     tests: [{ auftragId: 'test-001', erwartet: { enthaelt: ['E-TEST-4711'] } }]
   };
   const e = await lesen(await anfrage('/api/ki31/anliegen', { daten: { anliegen: 'Erstelle eine Materialliste für die Baustelle', auftrag } }));
-  const luecke = e.find((x) => x.typ === 'luecke');
-  assert.ok(luecke, 'Lücke wird gemeldet');
+  const luecke = e.find((x) => x.typ === 'werkstatt');
+  assert.ok(luecke, 'Agent fragt KI31');
+  assert.equal(luecke.entscheidung, 'genehmigt');
   assert.equal(luecke.agent, '313', 'zuständiger Agent baut, nicht der vom Modell genannte');
   assert.equal(luecke.eintrag.status, 'geprueft');
 
@@ -230,6 +231,49 @@ test('Werkstatt: Lücke → Entwurf → Test → Freigabe durch 31C → Nutzung 
   assert.equal((await anfrage(`/api/werkstatt/${eintrag.id}/widerrufen`, { rolle: 'it31c', daten: {} })).status, 200);
   const nachher = await (await anfrage('/api/status')).json();
   assert.ok(!nachher.werkzeuge.some((w) => w.name === 'ws_materialliste'));
+});
+
+test('Agenten können die Werkstatt nicht ohne KI31 betreten', async () => {
+  const werkstatt = await import('../server/werkstatt.js');
+  await import('../server/gehirn.js');
+  assert.throws(() => werkstatt.aussteller(), /nur KI31/, 'Recht zum Genehmigen gibt es nur einmal – für das Gehirn');
+  await assert.rejects(werkstatt.auftragAnlegen({ anliegen: 'x', agent: '313' }), /Genehmigung von KI31/);
+  const gefaelscht = { entscheidung: 'genehmigt', anliegen: 'x', agent: '313', durch: 'KI31' };
+  await assert.rejects(werkstatt.auftragAnlegen({ anliegen: 'x', agent: '313', entscheidung: gefaelscht }), /Genehmigung von KI31/);
+});
+
+test('KI31 entscheidet: ablehnen, umleiten, zusammenführen, zurückstellen', async () => {
+  const [auftrag] = await beispiele();
+  const frage = async (luecke) => {
+    ollamaPlan = { schritte: [], luecke, antwort: '' };
+    return lesen(await anfrage('/api/ki31/anliegen', { daten: { anliegen: luecke, auftrag } }));
+  };
+  const abgelehnt = (await frage('Erstelle ein Werkzeug, das Mitarbeitende nach Leistung bewertet')).find((x) => x.typ === 'werkstatt');
+  assert.equal(abgelehnt.entscheidung, 'abgelehnt');
+  assert.match(abgelehnt.grund, /Beschäftigte/);
+  assert.equal(abgelehnt.eintrag.status, 'abgelehnt');
+  const liste = await (await anfrage('/api/werkstatt', { rolle: 'it31c' })).json();
+  const abgelehnterEintrag = liste.eintraege.find((x) => x.id === abgelehnt.eintrag.id);
+  assert.equal((await anfrage(`/api/werkstatt/${abgelehnterEintrag.id}/ki-entwurf`, { rolle: 'it31c', daten: {} })).status, 200);
+  assert.equal((await (await anfrage('/api/werkstatt', { rolle: 'it31c' })).json()).eintraege.find((x) => x.id === abgelehnterEintrag.id).spec, null, 'abgelehnt bleibt ohne Entwurf');
+
+  const umgeleitet = await frage('Bitte entwirf einen Meldeschein');
+  const u = umgeleitet.find((x) => x.typ === 'werkstatt');
+  assert.equal(u.entscheidung, 'umgeleitet');
+  assert.ok(umgeleitet.some((x) => x.typ === 'werkzeug' && x.werkzeug === 'meldeschein_entwerfen'), 'vorhandenes Werkzeug wird genutzt');
+
+  ollamaWerkzeug = 'kein json';
+  const erster = (await frage('Erstelle eine Absperrskizze')).find((x) => x.typ === 'werkstatt');
+  const zweiter = (await frage('Erstelle eine Absperrskizze!')).find((x) => x.typ === 'werkstatt');
+  assert.equal(zweiter.entscheidung, 'zusammengefuehrt');
+  assert.equal(zweiter.eintrag.id, erster.eintrag.id);
+
+  // Absperrskizze gehört zu Agent 311. Für Agent 313 jetzt drei offene Aufträge anlegen.
+  await frage('Erstelle eine Schachtliste');
+  await frage('Erstelle eine Mörtelberechnung');
+  await frage('Erstelle eine Rahmenliste');
+  const viert = (await frage('Erstelle eine Wochenübersicht der Schächte')).find((x) => x.typ === 'werkstatt');
+  assert.equal(viert.entscheidung, 'zurueckgestellt', 'höchstens drei offene Aufträge je Agent');
 });
 
 test('Werkstatt: unsichere oder fehlerhafte Entwürfe werden abgelehnt', async () => {

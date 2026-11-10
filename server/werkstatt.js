@@ -1,6 +1,6 @@
 // Werkzeugwerkstatt: Hier erweitern sich die Fachagenten selbst – unter Kontrolle.
 //
-// Ablauf:  Vorschlag → Entwurf → Test mit fiktiven Testdaten → Freigabe durch 31C → Nutzung
+// Ablauf:  Agent fragt KI31 → KI31 entscheidet → Entwurf → Test mit fiktiven Testdaten → Freigabe durch 31C → Nutzung
 //          (jederzeit widerrufbar, jede Version bleibt nachvollziehbar)
 //
 // Sicherheit: Ein Werkstatt-Werkzeug ist KEIN Programmcode, sondern eine Beschreibung aus sicheren
@@ -190,18 +190,41 @@ export async function testeSpec(spec) {
 
 // ------------------------------------------------------------------ Lebenszyklus
 
-export async function vorschlagAnlegen({ anliegen, agent, grund, auftragId }) {
+// ------------------------------------------------------------------ Zugang nur über das Gehirn
+//
+// Ein Agent darf die Werkstatt nicht selbst betreten. Er fragt KI31 (gehirn.js). Nur das Gehirn
+// kann Entscheidungen ausstellen, und die Werkstatt nimmt nur Aufträge mit einer solchen
+// Entscheidung an. Das Recht zum Ausstellen wird genau einmal vergeben – an das Gehirn.
+
+const ENTSCHEIDUNGEN = new WeakSet();
+let ausstellerVergeben = false;
+
+export function aussteller() {
+  if (ausstellerVergeben) throw new Error('Das Recht, Werkstatt-Entscheidungen auszustellen, ist bereits vergeben (nur KI31).');
+  ausstellerVergeben = true;
+  return (daten) => {
+    const e = Object.freeze({ ...daten, durch: 'KI31', zeit: new Date().toISOString() });
+    ENTSCHEIDUNGEN.add(e);
+    return e;
+  };
+}
+
+const istEntscheidung = (e) => Boolean(e && ENTSCHEIDUNGEN.has(e));
+export const OFFEN = ['genehmigt', 'entwurf', 'geprueft'];
+export const normalisiere = (t) => String(t).toLowerCase().replace(/[^a-zäöüß0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Legt einen Werkstatt-Auftrag an – nur mit Genehmigung von KI31. */
+export async function auftragAnlegen({ anliegen, agent, auftragId, entscheidung }) {
+  if (!istEntscheidung(entscheidung) || entscheidung.entscheidung !== 'genehmigt' || entscheidung.anliegen !== anliegen || entscheidung.agent !== agent)
+    throw new WerkstattFehler('Ohne Genehmigung von KI31 gibt es keinen Werkstatt-Auftrag.', 403);
   const liste = await lade();
-  // Gleiches offenes Anliegen nicht doppelt anlegen.
-  const vorhanden = liste.find((e) => e.anliegen === anliegen && ['vorschlag', 'entwurf', 'geprueft'].includes(e.status));
-  if (vorhanden) return vorhanden;
   const e = {
     id: crypto.randomUUID(),
-    status: 'vorschlag',
+    status: 'genehmigt',
     version: 0,
     agent,
     anliegen,
-    grund: grund || 'Kein passendes Werkzeug vorhanden.',
+    grund: entscheidung.grund,
     beispielAuftrag: auftragId || null,
     erstellt: new Date().toISOString(),
     spec: null,
@@ -209,8 +232,25 @@ export async function vorschlagAnlegen({ anliegen, agent, grund, auftragId }) {
     freigabe: null,
     verlauf: []
   };
-  vermerk(e, `Vorschlag von Agent ${agent}: ${e.grund}`, 'KI31');
+  vermerk(e, `Agent ${agent} hat KI31 um die Werkstatt gebeten`, `Agent ${agent}`);
+  vermerk(e, `Genehmigt: ${entscheidung.grund}`, 'KI31');
   liste.push(e);
+  await speichere(liste);
+  return e;
+}
+
+/** Hält eine abgelehnte oder zurückgestellte Anfrage fest (Gedächtnis von KI31). */
+export async function anfrageVermerken({ anliegen, agent, entscheidung }) {
+  if (!istEntscheidung(entscheidung) || !['abgelehnt', 'zurueckgestellt'].includes(entscheidung.entscheidung))
+    throw new WerkstattFehler('Nur Entscheidungen von KI31 werden vermerkt.', 403);
+  const liste = await lade();
+  let e = liste.find((x) => x.status === entscheidung.entscheidung && normalisiere(x.anliegen) === normalisiere(anliegen));
+  if (!e) {
+    e = { id: crypto.randomUUID(), status: entscheidung.entscheidung, version: 0, agent, anliegen, grund: entscheidung.grund, erstellt: new Date().toISOString(), spec: null, testergebnis: null, freigabe: null, verlauf: [] };
+    liste.push(e);
+  }
+  vermerk(e, `Agent ${agent} hat KI31 um die Werkstatt gebeten`, `Agent ${agent}`);
+  vermerk(e, `${entscheidung.entscheidung === 'abgelehnt' ? 'Abgelehnt' : 'Zurückgestellt'}: ${entscheidung.grund}`, 'KI31');
   await speichere(liste);
   return e;
 }
@@ -222,6 +262,7 @@ export async function entwurfSpeichern(id, spec, rolle) {
   if (fehler.length) throw Object.assign(new WerkstattFehler('Die Beschreibung ist noch nicht gültig.'), { details: fehler });
   return aendere(id, (e) => {
     if (e.status === 'freigegeben') throw new WerkstattFehler('Ein freigegebenes Werkzeug wird nicht direkt geändert. Erst widerrufen.');
+    if (!OFFEN.includes(e.status)) throw new WerkstattFehler('Kein genehmigter Werkstatt-Auftrag. Ein Agent muss zuerst KI31 fragen.', 403);
     e.spec = spec;
     e.status = 'entwurf';
     e.version += 1;
@@ -273,7 +314,7 @@ export async function verwerfen(id, rolle) {
 export async function wiederAufnehmen(id, rolle) {
   return aendere(id, (e) => {
     if (!['widerrufen', 'verworfen'].includes(e.status)) throw new WerkstattFehler('Nur widerrufene oder verworfene Einträge.');
-    e.status = e.spec ? 'entwurf' : 'vorschlag';
+    e.status = e.spec ? 'entwurf' : 'genehmigt';
     e.testergebnis = null;
     e.freigabe = null;
     vermerk(e, 'Wieder in Arbeit genommen', rolle);

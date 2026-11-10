@@ -28,6 +28,7 @@ Arbeitsplattform des Kanalbetriebs 31 und der KI-Assistent **KI31**.
   Freigabe neuer Werkzeuge.
 - Feste Prüfregeln vor KI. Das Modell darf Pflichtprüfungen nicht ersetzen.
 - KI-Ausgaben in festen Schemata. Werte außerhalb erlaubter Listen werden verworfen.
+- Agenten erweitern sich nie selbst: Werkstatt nur mit Genehmigung von KI31, Nutzung nur nach Freigabe durch 31C.
 - Erster Maßstab: schneller zu einem brauchbaren Meldeschein, einschließlich Kontrollzeit.
 
 ## Sprache und Stil

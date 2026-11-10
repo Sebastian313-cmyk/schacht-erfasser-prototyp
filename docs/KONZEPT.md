@@ -92,8 +92,20 @@ vertretbarer Hardware die besten Entwürfe liefert.
 
 ### Stufe 4 – Werkzeugwerkstatt (Selbsterweiterung unter Kontrolle)
 
-**Erster Stand umgesetzt (Pilot 0.2):** Findet KI31 kein Werkzeug, legt der zuständige Agent einen
-Vorschlag an, baut einen Entwurf, testet ihn mit den fiktiven Testaufträgen, und 31C gibt ihn für
+**Erster Stand umgesetzt (Pilot 0.2):** Agenten erweitern sich nicht selbst. Findet ein Agent kein
+Werkzeug, fragt er KI31. Das Gehirn entscheidet nach festen, nachvollziehbaren Regeln:
+
+| Entscheidung | Wann |
+|---|---|
+| abgelehnt | Das Anliegen berührt eine Grenze: Rechte und Freigaben, Entscheidung über Einstiegserlaubnis, Löschen, Bewertung oder Überwachung von Beschäftigten, Versand nach außen, Zugangsdaten |
+| umgeleitet | Ein vorhandenes Werkzeug passt bereits – KI31 nutzt es direkt |
+| zusammengeführt | Für dasselbe Anliegen läuft schon ein Werkstatt-Auftrag |
+| zurückgestellt | Der Agent hat schon 3 offene Werkstatt-Aufträge |
+| genehmigt | sonst – erst dann darf der Agent in die Werkstatt |
+
+Die Werkstatt nimmt technisch nur Aufträge an, die das Gehirn genehmigt hat. Das Recht, Genehmigungen
+auszustellen, wird beim Start genau einmal vergeben – an KI31. Abgelehnte und zurückgestellte Anfragen
+bleiben für 31C sichtbar. Mit Genehmigung baut der Agent einen Entwurf, testet ihn mit den fiktiven Testaufträgen, und 31C gibt ihn für
 bestimmte Rollen frei oder widerruft ihn. Werkzeuge bestehen aus sicheren Bausteinen
 (Textvorlage, Prüfregeln, Feldänderungen) – nicht aus Programmcode. Weitere Bausteine, z. B.
 Berechnungen oder Tabellen, kommen dazu, wenn die Agenten sie brauchen.

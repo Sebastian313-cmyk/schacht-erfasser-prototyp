@@ -117,9 +117,9 @@ dialog td.zahl, dialog th.zahl { text-align: right; font-variant-numeric: tabula
 .ws-kopf { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
 .ws-eintrag textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; }
 .ws-eintrag ul { margin: 0; padding-left: 1.1rem; font-size: .85rem; }
-.st-vorschlag, .st-entwurf { background: var(--warn-grund); color: var(--warn); }
+.st-genehmigt, .st-entwurf, .st-zurueckgestellt { background: var(--warn-grund); color: var(--warn); }
 .st-geprueft { background: var(--ok-grund); }
 .st-freigegeben { background: var(--akzent); color: var(--akzent-text); }
-.st-widerrufen, .st-verworfen { background: var(--fehler-grund); color: var(--fehler); }
+.st-widerrufen, .st-verworfen, .st-abgelehnt { background: var(--fehler-grund); color: var(--fehler); }
 .ok { color: var(--akzent); }
 .nok { color: var(--fehler); }

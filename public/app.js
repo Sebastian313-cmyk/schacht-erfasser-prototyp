@@ -347,7 +347,7 @@ async function anliegenSenden(text) {
           antwortText += e.text;
           antwortZeile.textContent = antwortText;
         } else if (e.typ === 'werkzeug') zeigeWerkzeugErgebnis(e.werkzeug, e.ergebnis);
-        else if (e.typ === 'luecke') zeigeLuecke(e);
+        else if (e.typ === 'werkstatt') zeigeWerkstattAnfrage(e);
         else if (e.typ === 'naechster' && e.vorschlaege.length) {
           const box = el('div', { klasse: 'naechste' });
           for (const v of e.vorschlaege) box.append(el('button', { type: 'button', klasse: 'leise klein', text: v.text, onclick: () => anliegenSenden(v.anliegen) }));
@@ -364,13 +364,22 @@ async function anliegenSenden(text) {
   }
 }
 
-function zeigeLuecke(e) {
-  const status = { vorschlag: 'Vorschlag', entwurf: 'Entwurf', geprueft: 'Entwurf getestet – wartet auf Freigabe durch 31C' };
-  const box = el('div', { klasse: 'kasten' },
-    el('strong', { text: `Agent ${e.agent} hat dafür noch kein Werkzeug.` }),
-    el('span', { text: `In der Werkstatt angelegt: „${e.eintrag.titel}“ – ${status[e.eintrag.status] || e.eintrag.status}.` }),
-    el('span', { klasse: 'hinweis', text: 'Nutzbar wird das Werkzeug erst, wenn 31C es freigibt.' }),
-    el('div', { klasse: 'knopfzeile' }, el('button', { type: 'button', klasse: 'leise klein', text: 'Werkstatt öffnen', onclick: werkstattOeffnen })));
+function zeigeWerkstattAnfrage(e) {
+  zeile('system', `Agent ${e.agent} kommt nicht weiter und fragt KI31: Darf ich für „${e.anfrage}“ ein Werkzeug in der Werkstatt bauen?`);
+  const titel = {
+    genehmigt: 'KI31: genehmigt',
+    abgelehnt: 'KI31: abgelehnt',
+    zurueckgestellt: 'KI31: zurückgestellt',
+    umgeleitet: 'KI31: nicht nötig – vorhandenes Werkzeug',
+    zusammengefuehrt: 'KI31: läuft bereits'
+  };
+  const box = el('div', { klasse: 'kasten' }, el('strong', { klasse: e.entscheidung === 'abgelehnt' ? 'nok' : '', text: titel[e.entscheidung] || e.entscheidung }), el('span', { text: e.grund }));
+  if (e.werkzeuge?.length) box.append(el('span', { text: `Ich nutze: ${e.werkzeuge.join(', ')}.` }));
+  if (e.eintrag && ['genehmigt', 'entwurf', 'geprueft'].includes(e.eintrag.status)) {
+    const stand = { genehmigt: 'Auftrag angelegt', entwurf: 'Entwurf gebaut', geprueft: 'Entwurf getestet – wartet auf Freigabe durch 31C' };
+    box.append(el('span', { text: `Werkstatt: „${e.eintrag.titel}“ – ${stand[e.eintrag.status]}.` }), el('span', { klasse: 'hinweis', text: 'Nutzbar wird das Werkzeug erst, wenn 31C es freigibt.' }));
+  }
+  if (e.eintrag) box.append(el('div', { klasse: 'knopfzeile' }, el('button', { type: 'button', klasse: 'leise klein', text: 'Werkstatt öffnen', onclick: werkstattOeffnen })));
   zeile('assistant', box);
 }
 
@@ -548,12 +557,12 @@ $('#zuruecksetzen').addEventListener('click', async () => {
 
 // ------------------------------------------------------------------ Werkstatt
 
-const WS_STATUS = { vorschlag: 'Vorschlag', entwurf: 'Entwurf', geprueft: 'getestet', freigegeben: 'freigegeben', widerrufen: 'widerrufen', verworfen: 'verworfen' };
+const WS_STATUS = { genehmigt: 'von KI31 genehmigt', entwurf: 'Entwurf', geprueft: 'getestet', freigegeben: 'freigegeben', widerrufen: 'widerrufen', verworfen: 'verworfen', abgelehnt: 'von KI31 abgelehnt', zurueckgestellt: 'von KI31 zurückgestellt' };
 
 async function werkstattZaehler() {
   try {
     const d = await api('/api/werkstatt');
-    const offen = d.eintraege.filter((e) => ['vorschlag', 'entwurf', 'geprueft'].includes(e.status)).length;
+    const offen = d.eintraege.filter((e) => ['genehmigt', 'entwurf', 'geprueft'].includes(e.status)).length;
     $('#werkstatt-zaehler').hidden = offen === 0;
     $('#werkstatt-zaehler').textContent = String(offen);
   } catch {}
@@ -601,7 +610,8 @@ async function werkstattZeigen() {
       el('div', { klasse: 'ws-kopf' },
         el('strong', { text: e.spec?.titel || e.anliegen }),
         el('span', { klasse: `abzeichen st-${e.status}`, text: `${WS_STATUS[e.status] || e.status}${e.version ? ` · v${e.version}` : ''}` })),
-      el('span', { klasse: 'hinweis', text: `Agent ${e.agent} · Anliegen: „${e.anliegen}“${e.spec ? ` · Art: ${d.arten[e.spec.art] || e.spec.art}` : ''}` }));
+      el('span', { klasse: 'hinweis', text: `Agent ${e.agent} · Anliegen: „${e.anliegen}“${e.spec ? ` · Art: ${d.arten[e.spec.art] || e.spec.art}` : ''}` }),
+      el('span', { klasse: 'hinweis', text: `Entscheidung KI31: ${e.grund}` }));
     if (e.freigabe) block.append(el('span', { klasse: 'hinweis', text: `Freigegeben für: ${e.freigabe.rollen.map((r) => zustand.status.rollen[r] || r).join(', ')} durch ${e.freigabe.durch}` }));
 
     if (e.testergebnis) {
@@ -619,7 +629,7 @@ async function werkstattZeigen() {
     if (d.darfBearbeiten) {
       const knoepfe = el('div', { klasse: 'knopfzeile' });
       const knopf = (text, fn, leise = true) => knoepfe.append(el('button', { type: 'button', klasse: leise ? 'leise klein' : 'klein', text, onclick: fn }));
-      if (['vorschlag', 'entwurf', 'geprueft'].includes(e.status)) {
+      if (['genehmigt', 'entwurf', 'geprueft'].includes(e.status)) {
         knopf(e.spec ? 'Agent soll neu entwerfen' : 'Agent soll Entwurf bauen', () => tue('ki-entwurf'));
         if (e.spec) {
           knopf('Änderungen speichern', () => {
